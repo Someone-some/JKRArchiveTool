@@ -1,13 +1,7 @@
 #pragma once
 
-#include <array>
-#include <algorithm>
 #include <fstream>
 #include <string>
-#include <vector>
-#include <streambuf>
-#include <numeric>
-#include <limits>
 #include "types.h"
 
 enum EndianSelect {
@@ -18,7 +12,7 @@ enum EndianSelect {
 class BinaryReader {
 public:
     BinaryReader(const std::string &, EndianSelect);
-    BinaryReader(s8*, u32, EndianSelect);
+    BinaryReader(u8*, u32, EndianSelect);
 
     ~BinaryReader();
 
@@ -34,6 +28,7 @@ public:
     std::string readString(const u32 &);
     std::string readNullTerminatedString();
 
+    u8* readBytes(u32 count);
     void close();
     void skip(u64);
     void seek(u64, std::ios::seekdir);
@@ -44,18 +39,4 @@ public:
 private:
     u64 mPosition = 0;
     std::istream* mStream = nullptr;
-};
-
-namespace Util {
-    template <typename T>
-    void SwapEndian(T &val) {
-        union U {
-            T val;
-            std::array<u8, sizeof(T)> raw;
-        } src, dst;
-
-        src.val = val;
-        std::reverse_copy(src.raw.begin(), src.raw.end(), dst.raw.begin());
-        val = dst.val;
-    }
 };

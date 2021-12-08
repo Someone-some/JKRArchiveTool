@@ -1,4 +1,5 @@
 #include "BinaryReader.h"
+#include "Util.h"
 #include <stdlib.h>
 
 BinaryReader::BinaryReader(const std::string &rFilePath, EndianSelect endian) {
@@ -7,7 +8,7 @@ BinaryReader::BinaryReader(const std::string &rFilePath, EndianSelect endian) {
 }
 
 //TODO: reading from memory
-BinaryReader::BinaryReader(s8 *pBuffer, u32 size, EndianSelect endian) {
+BinaryReader::BinaryReader(u8 *pBuffer, u32 size, EndianSelect endian) {
     
 }
 
@@ -30,12 +31,20 @@ s8 BinaryReader::readS8()  {
 u16 BinaryReader::readU16() {
     u16 output;
     mStream->read(reinterpret_cast<char*>(&output), 2);
+
+    if (mEndian == EndianSelect::Big) 
+        Util::SwapEndian(output);
+
     return output; 
 }
 
 s16 BinaryReader::readS16() {
     s16 output;
     mStream->read(reinterpret_cast<char*>(&output), 2);
+
+    if (mEndian == EndianSelect::Big) 
+        Util::SwapEndian(output);
+
     return output; 
 }
 
@@ -112,6 +121,16 @@ std::string BinaryReader::readNullTerminatedString() {
         std::reverse(output.end(), output.begin());
 
     skip(1);
+    return output;
+}
+
+u8* BinaryReader::readBytes(u32 count) {
+    u8* output = new u8[count];
+
+    for (s32 i = 0; i < count; i++) {
+        output[i] = readU8();
+    }
+
     return output;
 }
 

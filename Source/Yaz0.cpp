@@ -1,11 +1,4 @@
 #include "Yaz0.h"
-#include <cstdio>
-#include <cstdint>
-#include <cstring>
-#include <cstdlib>
-#include <iostream>
-#include <fstream>
-#include <vector>
 
 namespace Yaz0 {
     u8* decomp(const std::string &rFilePath) {
