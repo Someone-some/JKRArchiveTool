@@ -17,7 +17,11 @@ public:
     void writeS16(s16);
     void writeU32(u32);
     void writeS32(s32);
-    void writeBytes(const u8*);
+
+    void writeString(std::string);
+
+    void writeBytes(const u8*, u32);
+    void writePadding(u8, u32);
 
     EndianSelect mEndian;
 private:

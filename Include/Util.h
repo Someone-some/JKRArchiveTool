@@ -20,5 +20,6 @@ namespace Util {
 };
 
 namespace File {
-    void writeAllBytes(const std::string &, const u8*);
+    void writeAllBytes(const std::string &, const u8*, u32);
+    u8* readAllBytes(const std::string &, u32*);
 }

@@ -1,2 +1,2 @@
-RARCTools.exe "%1"
+RARCTools.exe "%1" "-decomp"
 pause

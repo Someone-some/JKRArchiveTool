@@ -29,6 +29,7 @@ public:
     std::string readNullTerminatedString();
 
     u8* readBytes(u32 count);
+    u8* readAllBytes();
     void close();
     void skip(u64);
     void seek(u64, std::ios::seekdir);

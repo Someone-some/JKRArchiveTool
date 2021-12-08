@@ -134,6 +134,10 @@ u8* BinaryReader::readBytes(u32 count) {
     return output;
 }
 
+u8* BinaryReader::readAllBytes() {
+    return readBytes(size());
+}
+
 void BinaryReader::skip(u64 count) {
     mStream->seekg(count, std::ifstream::cur);
 }
