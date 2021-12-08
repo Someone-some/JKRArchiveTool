@@ -88,18 +88,12 @@ s64 BinaryReader::readS64() {
     return output;
 }
 
-char BinaryReader::readChar() {
-    char output;
-    mStream->read(&output, 1);
-    return output;
-}
-
 std::string BinaryReader::readString(const u32 &rLength) {
     std::string output;
     output.reserve(rLength);
-    for (int i = 0; i < rLength; i++) {
-        char charBuffer;
-        mStream->read(&charBuffer, 1);
+    for (s32 i = 0; i < rLength; i++) {
+        u8 charBuffer;
+        mStream->read((char*)&charBuffer, 1);
         output.push_back(charBuffer);
     }
 
@@ -110,17 +104,23 @@ std::string BinaryReader::readString(const u32 &rLength) {
 }
 
 std::string BinaryReader::readNullTerminatedString() {
-    std::string output;
-    char buffer;
-    while (readChar() != 0) {
-        mStream->read(&buffer, 1);
+    std::string output = "";
+    while (peekU8() != '\0') {
+        u8 buffer;
+        mStream->read((char*)&buffer, 1);
         output.push_back(buffer);
     }
 
     if (mEndian == EndianSelect::Big)
         std::reverse(output.end(), output.begin());
-
+        
     skip(1);
+    return output;
+}
+
+u8 BinaryReader::peekU8() {
+    u8 output = readU8();
+    seek(position() -1, std::ios::beg);
     return output;
 }
 

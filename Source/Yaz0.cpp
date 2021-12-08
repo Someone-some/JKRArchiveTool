@@ -1,9 +1,16 @@
 #include "Yaz0.h"
 #include "BinaryWriter.h"
 #include "Util.h"
-#include <iostream>
 
 namespace Yaz0 {
+    bool check(const std::string &rFilePath) {
+        BinaryReader* reader = new BinaryReader(rFilePath, EndianSelect::Big);
+        std::string magic = reader->readString(0x4);
+        reader->~BinaryReader();
+
+        return magic == "Yaz0";
+    }
+    
     u8* decomp(const std::string &rFilePath, u32 *bufferSize, bool writeToFile) {
         BinaryReader* reader = new BinaryReader(rFilePath, EndianSelect::Big);
         if (reader->readString(0x4) != "Yaz0") {
@@ -123,8 +130,7 @@ namespace Yaz0 {
                 ret.mDstPos = 0;
             }
         }
-        if (validBitCount > 0)
-        {
+        if (validBitCount > 0) {
             writer->writeU8(currCodeByte);
             writer->writeBytes(dst, ret.mDstPos);
             dstSize += ret.mDstPos + 1;

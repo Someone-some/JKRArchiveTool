@@ -24,10 +24,11 @@ public:
     s32 readS32();
     u64 readU64();
     s64 readS64();
-    char readChar();
     std::string readString(const u32 &);
     std::string readNullTerminatedString();
 
+
+    u8 peekU8();
     u8* readBytes(u32 count);
     u8* readAllBytes();
     void close();
