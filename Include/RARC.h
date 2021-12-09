@@ -10,7 +10,8 @@ public:
     RARC(const std::string &);
 
     ~RARC();
-
+    
+    void ExportContents(const std::string &);
     u8* getFile(const std::string &, u32 *);
 
     struct FileNode {

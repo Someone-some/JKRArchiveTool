@@ -1,2 +1,2 @@
 RARCTools.exe "%1" "-d"
-pause
+sleep 2

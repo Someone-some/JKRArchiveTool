@@ -1,4 +1,6 @@
 #include "RARC.h"
+#include "Util.h"
+#include <direct.h>
 
 RARC::RARC(const std::string &rFileName) {
     mReader = new BinaryReader(rFileName, EndianSelect::Big);
@@ -86,6 +88,21 @@ void RARC::read(BinaryReader &rReader) {
 
 RARC::~RARC() {
     delete mReader;
+}
+
+void RARC::ExportContents(const std::string &rFilePath) {
+    std::string FullPath;
+    for (s32 i = 0; i < mDirNodes.size(); i++) {
+        FullPath = rFilePath + mDirNodes[i]->mFullName;
+        _mkdir(FullPath.c_str());
+    }
+
+    for (s32 y = 0; y < mFileNodes.size(); y++) {
+        FullPath = rFilePath + mFileNodes[y]->mFullName;
+        u32 size;
+        u8* file = getFile(mFileNodes[y]->mFullName, &size);
+        File::writeAllBytes(FullPath, file, size);
+    }
 }
 
 u8* RARC::getFile(const std::string &rFilePath, u32 *size) {
