@@ -1,8 +1,8 @@
 #include "RARC.h"
 
 RARC::RARC(const std::string &rFileName) {
-    BinaryReader* reader = new BinaryReader(rFileName, EndianSelect::Big);
-    read(*reader);
+    mReader = new BinaryReader(rFileName, EndianSelect::Big);
+    read(*mReader);
 }
 
 void RARC::read(BinaryReader &rReader) {
@@ -12,7 +12,7 @@ void RARC::read(BinaryReader &rReader) {
     }
 
     rReader.seek(0xC, std::ios::beg);
-    mFileDataOffset = rReader.readU32(); + 0x20;
+    mFileDataOffset = rReader.readU32() + 0x20;
     rReader.seek(0x20, std::ios::beg);
     mDirNodeCount = rReader.readU32();
     mDirNodeOffset = rReader.readU32() + 0x20;
@@ -45,8 +45,8 @@ void RARC::read(BinaryReader &rReader) {
             u16 id = rReader.readU16();
             rReader.skip(0x4);
             u16 nameOffset = rReader.readU16();
-            u16 dataOffset = rReader.readU32();
-            u16 dataSize = rReader.readU32();
+            s32 dataOffset = rReader.readS32();
+            u32 dataSize = rReader.readU32();
 
             rReader.seek(mStringTableOffset + nameOffset, std::ios::beg);
             std::string name = rReader.readNullTerminatedString();
@@ -73,7 +73,7 @@ void RARC::read(BinaryReader &rReader) {
                 file->mEntryId = id;
                 file->mParentDirId = i;
                 file->mNameOffset = nameOffset;
-                file->mDataOffset = dataOffset;
+                file->mDataOffset = mFileDataOffset + dataOffset;
                 file->mDataSize = dataSize;
                 file->mName = name;
                 file->mFullName = fullName;     
@@ -81,7 +81,21 @@ void RARC::read(BinaryReader &rReader) {
                 mFileNodes.push_back(file);
             }
         }
-
-        rReader.~BinaryReader();
     }
+}
+
+RARC::~RARC() {
+    delete mReader;
+}
+
+u8* RARC::getFile(const std::string &rFilePath, u32 *size) {
+    for (s32 i = 0; i < mFileNodes.size(); i++) {
+        if (mFileNodes[i]->mFullName == rFilePath) {
+            mReader->seek(mFileNodes[i]->mDataOffset, std::ios::beg);
+            *size = mFileNodes[i]->mDataSize;
+            return mReader->readBytes(mFileNodes[i]->mDataSize);
+        }
+    }
+
+    printf("File not found\n");
 }

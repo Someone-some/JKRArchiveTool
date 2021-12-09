@@ -1,2 +1,2 @@
-RARCTools.exe "%1" "-comp"
+RARCTools.exe "%1" "-c"
 pause

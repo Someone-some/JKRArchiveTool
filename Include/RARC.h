@@ -9,6 +9,10 @@ class RARC {
 public:
     RARC(const std::string &);
 
+    ~RARC();
+
+    u8* getFile(const std::string &, u32 *);
+
     struct FileNode {
         u32 mEntryOffset;
         u32 mEntryId;
@@ -40,4 +44,5 @@ private:
     u32 mDirNodeOffset;
     u32 mFileEntriesOffset;
     u32 mStringTableOffset;
+    BinaryReader* mReader;
 };

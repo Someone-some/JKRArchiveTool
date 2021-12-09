@@ -9,6 +9,7 @@ namespace Yaz0 {
     u32 compSimple(u8 *, s32, s32, u32 *);
     u32 compAdvanced(u8 *, s32, s32, u32 *);
     void comp(const std::string &);
+    void fastComp(const std::string &);
 
     struct Ret {
         s32 mSrcPos;
