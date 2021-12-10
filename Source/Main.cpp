@@ -9,6 +9,7 @@ int main(int argc, char*argv[]) {
     u32 bufferSize;
     char* filePath = argv[1];
     char* outputPath;
+    bool fastComp = false;
 
     if (!strcasecmp("--help", argv[1]) || !strcasecmp("-h", argv[1])) {
         printf("[FilePath] [-d/--decomp] [-c/--comp] [-u/--unpack] [-f/--fast]\n[-f] increases the speed of compression, the downside is that the files are bigger\n");
@@ -23,7 +24,7 @@ int main(int argc, char*argv[]) {
             }
         }
         else if (!strcasecmp("--comp", argv[i]) || !strcasecmp("-c", argv[i])) {
-            bool fastComp = false;
+            fastComp = false;
             for (s32 y = 0; y < argc; y++) {
                 if (!strcasecmp("--fast", argv[y]) || !strcasecmp("-f", argv[y]))
                     fastComp = true;
@@ -36,12 +37,18 @@ int main(int argc, char*argv[]) {
                 Yaz0::comp(filePath);
         }
         else if (!strcasecmp("--unpack", argv[i]) || !strcasecmp("-u", argv[i])) {
+            printf("Unpacking: %s\n", filePath);
+            Yaz0::decomp(filePath, &bufferSize, true);
             RARC* archive = new RARC(filePath);
             std::string path = filePath;
             u32 lastSlashIdx = path.rfind('\\');
             std::string dir = path.substr(0, lastSlashIdx);
-            std::cout << dir << '\n';
-            archive->ExportContents(dir);
+            archive->exportContents(dir);
+            
+            if (fastComp)
+                Yaz0::fastComp(filePath);
+            else
+                Yaz0::comp(filePath);
         }
     }
     printf("Complete!\n");

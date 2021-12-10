@@ -7,9 +7,15 @@ RARC::RARC(const std::string &rFileName) {
     read(*mReader);
 }
 
+// TODO: BinaryReader::readU32 doesn't work when reading from memory :/
+RARC::RARC(u8*pData, u32 size) {
+    mReader = new BinaryReader(pData, size, EndianSelect::Big);
+    read(*mReader);
+}
+
 void RARC::read(BinaryReader &rReader) {
     if (rReader.readString(0x4) != "RARC") {
-        printf("Invalid identifier! Expected: RARC");
+        printf("Invalid identifier! Expected: RARC\n");
         return;
     }
 
@@ -79,7 +85,6 @@ void RARC::read(BinaryReader &rReader) {
                 file->mDataSize = dataSize;
                 file->mName = name;
                 file->mFullName = fullName;     
-
                 mFileNodes.push_back(file);
             }
         }
@@ -90,7 +95,7 @@ RARC::~RARC() {
     delete mReader;
 }
 
-void RARC::ExportContents(const std::string &rFilePath) {
+void RARC::exportContents(const std::string &rFilePath) {
     std::string FullPath;
     for (s32 i = 0; i < mDirNodes.size(); i++) {
         FullPath = rFilePath + mDirNodes[i]->mFullName;

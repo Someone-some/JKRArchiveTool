@@ -8,10 +8,11 @@
 class RARC {
 public:
     RARC(const std::string &);
+    RARC(u8*, u32);
 
     ~RARC();
     
-    void ExportContents(const std::string &);
+    void exportContents(const std::string &);
     u8* getFile(const std::string &, u32 *);
 
     struct FileNode {
@@ -40,7 +41,7 @@ public:
 private:
     void read(BinaryReader&);
 
-    u32 mFileDataOffset;
+    u32 mFileDataOffset = 0;
     u32 mDirNodeCount;
     u32 mDirNodeOffset;
     u32 mFileEntriesOffset;

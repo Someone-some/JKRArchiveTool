@@ -9,11 +9,15 @@ BinaryReader::BinaryReader(const std::string &rFilePath, EndianSelect endian) {
 
 //TODO: reading from memory
 BinaryReader::BinaryReader(u8 *pBuffer, u32 size, EndianSelect endian) {
-    
+    mBuffer = new MemoryBuffer(pBuffer, size);
+    mStream = new std::istream(mBuffer);
 }
 
 BinaryReader::~BinaryReader() {
     delete mStream;
+
+    if (mBuffer) 
+        delete[] mBuffer;
 }
 
 u8 BinaryReader::readU8() {
@@ -142,7 +146,7 @@ void BinaryReader::skip(u64 count) {
     mStream->seekg(count, std::ifstream::cur);
 }
 
-void BinaryReader::seek(u64 pos, std::ios::seekdir seekDir) {
+void BinaryReader::seek(u32 pos, std::ios::seekdir seekDir) {
     mStream->seekg(pos, seekDir);
 }
 

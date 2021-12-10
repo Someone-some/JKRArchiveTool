@@ -1,2 +1,2 @@
-RARCTools.exe "%1" "-d" "-u"
-sleep 2
+RARCTools.exe "%1" "-u"
+pause
