@@ -8,7 +8,7 @@
 class RARC {
 public:
     RARC(const std::string &);
-    RARC(u8*, u32);
+    RARC(const u8*, u32);
 
     ~RARC();
     

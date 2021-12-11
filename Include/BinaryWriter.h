@@ -7,7 +7,7 @@
 class BinaryWriter {
 public:
     BinaryWriter(const std::string &, EndianSelect);
-    BinaryWriter(u8*, EndianSelect);
+    BinaryWriter(const u8*, u32, EndianSelect);
 
     ~BinaryWriter();
 
@@ -25,5 +25,6 @@ public:
 
     EndianSelect mEndian;
 private:
-    std::ofstream* mStream = nullptr;
+    MemoryBuffer* mBuffer = nullptr;
+    std::ostream* mStream = nullptr;
 };

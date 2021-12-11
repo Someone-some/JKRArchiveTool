@@ -6,8 +6,17 @@ BinaryWriter::BinaryWriter(const std::string &rFileName, EndianSelect endian) {
     mEndian = endian;
 }
 
+BinaryWriter::BinaryWriter(const u8* buffer, u32 size, EndianSelect endian) {
+    mBuffer = new MemoryBuffer(buffer, size);
+    mStream = new std::ostream(mBuffer);
+    mEndian = endian;
+}
+
 BinaryWriter::~BinaryWriter() {
     delete mStream;
+
+    if (mBuffer)
+        delete[] mBuffer;
 }
 
 void BinaryWriter::writeU8(u8 value) {
@@ -35,7 +44,7 @@ void BinaryWriter::writeS16(s16 value) {
 void BinaryWriter::writeU32(u32 value) {
     if (mEndian == EndianSelect::Big)
         Util::SwapEndian(value);
-        
+    
     mStream->write(reinterpret_cast<const char*>(&value), 4);
 }
 

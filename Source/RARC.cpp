@@ -7,8 +7,7 @@ RARC::RARC(const std::string &rFileName) {
     read(*mReader);
 }
 
-// TODO: BinaryReader::readU32 doesn't work when reading from memory :/
-RARC::RARC(u8*pData, u32 size) {
+RARC::RARC(const u8*pData, u32 size) {
     mReader = new BinaryReader(pData, size, EndianSelect::Big);
     read(*mReader);
 }

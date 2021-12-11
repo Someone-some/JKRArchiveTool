@@ -16,14 +16,14 @@ enum EndianSelect {
 
 class MemoryBuffer : public std::streambuf {
 public:
-    MemoryBuffer(u8*pBuffer, u32 size) : std::streambuf() {
+    MemoryBuffer(const u8*pBuffer, const u32 size) : std::streambuf() {
         mBuffer = pBuffer;
         mSize = size;
         setg((char*)pBuffer, (char*)pBuffer, (char*)(pBuffer + size));
     }
 
     u32 mSize;
-    u8* mBuffer;
+    const u8* mBuffer;
 
 protected: 
     virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::in) override {
@@ -81,7 +81,7 @@ protected:
 class BinaryReader {
 public:
     BinaryReader(const std::string &, EndianSelect);
-    BinaryReader(u8*, u32, EndianSelect);
+    BinaryReader(const u8 *, u32, EndianSelect);
 
     ~BinaryReader();
 
@@ -97,7 +97,7 @@ public:
     std::string readNullTerminatedString();
 
     u8 peekU8();
-    u8* readBytes(u32 count);
+    u8* readBytes(u32);
     u8* readAllBytes();
     void close();
     void skip(u64);

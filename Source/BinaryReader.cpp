@@ -7,10 +7,10 @@ BinaryReader::BinaryReader(const std::string &rFilePath, EndianSelect endian) {
     mEndian = endian;
 }
 
-//TODO: reading from memory
-BinaryReader::BinaryReader(u8 *pBuffer, u32 size, EndianSelect endian) {
+BinaryReader::BinaryReader(const u8 *pBuffer, u32 size, EndianSelect endian) {
     mBuffer = new MemoryBuffer(pBuffer, size);
     mStream = new std::istream(mBuffer);
+    mEndian = endian;
 }
 
 BinaryReader::~BinaryReader() {
@@ -22,19 +22,19 @@ BinaryReader::~BinaryReader() {
 
 u8 BinaryReader::readU8() {
     u8 output;
-    mStream->read(reinterpret_cast<char*>(&output), 1);
+    mStream->read((char*)&output, 1);
     return output;
 }
 
 s8 BinaryReader::readS8()  {
     s8 output;
-    mStream->read(reinterpret_cast<char*>(&output), 1);
+    mStream->read((char*)&output, 1);
     return output;
 }
 
 u16 BinaryReader::readU16() {
     u16 output;
-    mStream->read(reinterpret_cast<char*>(&output), 2);
+    mStream->read((char*)&output, 2);
 
     if (mEndian == EndianSelect::Big) 
         Util::SwapEndian(output);
@@ -44,7 +44,7 @@ u16 BinaryReader::readU16() {
 
 s16 BinaryReader::readS16() {
     s16 output;
-    mStream->read(reinterpret_cast<char*>(&output), 2);
+    mStream->read((char*)&output, 2);
 
     if (mEndian == EndianSelect::Big) 
         Util::SwapEndian(output);
@@ -54,7 +54,7 @@ s16 BinaryReader::readS16() {
 
 u32 BinaryReader::readU32() {
     u32 output;
-    mStream->read(reinterpret_cast<char*>(&output), 4);
+    mStream->read((char*)&output, 4);
 
     if (mEndian == EndianSelect::Big)
         Util::SwapEndian(output);
@@ -64,7 +64,7 @@ u32 BinaryReader::readU32() {
 
 s32 BinaryReader::readS32() {
     s32 output;
-    mStream->read(reinterpret_cast<char*>(&output), 4);
+    mStream->read((char*)&output, 4);
 
     if (mEndian == EndianSelect::Big)
         Util::SwapEndian(output);
@@ -74,7 +74,7 @@ s32 BinaryReader::readS32() {
 
 u64 BinaryReader::readU64() {
     u64 output;
-    mStream->read(reinterpret_cast<char*>(&output), 8);
+    mStream->read((char*)&output, 8);
 
     if (mEndian == EndianSelect::Big)
         Util::SwapEndian(output);
@@ -84,7 +84,7 @@ u64 BinaryReader::readU64() {
 
 s64 BinaryReader::readS64() {
     s64 output;
-    mStream->read(reinterpret_cast<char*>(&output), 8);
+    mStream->read((char*)&output, 8);
 
     if (mEndian == EndianSelect::Big)
         Util::SwapEndian(output);
