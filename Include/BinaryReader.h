@@ -97,7 +97,7 @@ public:
     std::string readNullTerminatedString();
 
     u8 peekU8();
-    u8* readBytes(u32);
+    u8* readBytes(const u32);
     u8* readAllBytes();
     void close();
     void skip(u64);

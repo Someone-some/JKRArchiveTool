@@ -1,17 +1,46 @@
-#include "Yaz0.h"
+#include "JKRCompression.h"
 #include "BinaryWriter.h"
 #include "Util.h"
 
-namespace Yaz0 {
-    bool check(const std::string &rFilePath) {
+namespace JKRCompression {
+    JKRCompressionType checkCompression(const std::string &rFilePath) {
         BinaryReader* reader = new BinaryReader(rFilePath, EndianSelect::Big);
         std::string magic = reader->readString(0x4);
-        reader->~BinaryReader();
 
-        return magic == "Yaz0";
+        if (magic == "Yaz0")
+            return JKRCompressionType::JKRCompressionType_SZS;
+        else if (magic == "Yay0") 
+            return JKRCompressionType::JKRCompressionType_SZP;
+        else {
+            reader->seek(0, std::ios::beg);
+
+            if (reader->readString(0x3) == "ASR")
+                return JKRCompressionType::JKRCompression_ASR;
+        }
+        
+        reader->~BinaryReader();
+        return JKRCompressionType::JKRCompressionType_NONE;
+    }
+
+    u8* decode(const std::string &rFilePath, u32 *bufferSize) {
+        JKRCompressionType compType = checkCompression(rFilePath);
+
+        switch (compType) {
+            case JKRCompressionType::JKRCompressionType_NONE:
+                return nullptr;
+            case JKRCompressionType::JKRCompressionType_SZP:
+                return decodeSZP(rFilePath, bufferSize);
+            case JKRCompressionType::JKRCompressionType_SZS:
+                return decodeSZS(rFilePath, bufferSize);
+            case JKRCompressionType::JKRCompression_ASR:
+                printf("Compression type not supported!\n");
+                return nullptr;
+        }
+
+        return nullptr;
     }
     
-    u8* decomp(const std::string &rFilePath, u32 *bufferSize, bool writeToFile) {
+    u8* decodeSZS(const std::string &rFilePath, u32 *bufferSize) {
         BinaryReader* reader = new BinaryReader(rFilePath, EndianSelect::Big);
         if (reader->readString(0x4) != "Yaz0") {
             printf("Invalid identifier! Expected Yaz0\n");
@@ -61,13 +90,76 @@ namespace Yaz0 {
         }     
         
         reader->~BinaryReader();
-
-        if (writeToFile)
-            File::writeAllBytes(rFilePath, dst, decompSize);
         return dst;
     }
 
-    void comp(const std::string &rFilePath) {
+    u8* decodeSZP(const std::string &rFilePath, u32 *bufferSize) {
+        BinaryReader* reader = new BinaryReader(rFilePath, EndianSelect::Big);
+        if (reader->readString(0x4) != "Yay0") {
+            printf("Invalid identifier! Expected Yay0\n");
+            return nullptr;
+        }
+
+        u32 decompSize = reader->readU32();
+        u32 linkTableOffs = reader->readU32();
+        u32 byteChunkAndCountModiferOffset = reader->readU32();
+
+        u8* dst = new u8[decompSize];
+        *bufferSize = decompSize;
+
+        s32 maskedBitCount = 0;
+        s32 curOffsInDst = 0;
+        s32 curMask = 0;
+
+        while (curOffsInDst < decompSize) {
+            if (maskedBitCount == 0) {
+                curMask = reader->readS32();
+                maskedBitCount = 32;
+            }
+
+            if (((u32)curMask & (u32)0x80000000) == 0x80000000) {
+                u64 curPos = reader->position();
+                reader->seek(byteChunkAndCountModiferOffset++, std::ios::beg);
+                dst[curOffsInDst++] = reader->readU8();
+                reader->seek(curPos, std::ios::beg);
+            }
+            else {
+                u64 curPos = reader->position();
+                reader->seek(linkTableOffs++, std::ios::beg);
+                u16 link = reader->readU16();
+                linkTableOffs += 2;
+                reader->seek(curPos, std::ios::beg);
+
+                s32 offset = curOffsInDst - (link & 0xFFF);
+                s32 count = link >> 0xC;
+
+                if (count == 0) {
+                    u64 curPos = reader->position();
+                    reader->seek(byteChunkAndCountModiferOffset++, std::ios::beg);
+                    u8 countModifer = reader->readU8();
+                    reader->seek(curPos, std::ios::beg);
+                    count += countModifer + 0x12;
+                }
+                else {
+                    count += 2;
+                }
+
+                s32 blockCopy = offset;
+
+                for (s32 i = 0; i < count; i++) {
+                    dst[curOffsInDst++] = dst[blockCopy++ -1];
+                }
+            }
+
+            curMask <<= 1;
+            maskedBitCount--;
+        }
+
+        reader->~BinaryReader();
+        return dst;
+    }
+
+    void encodeSZS(const std::string &rFilePath) {
         u32 srcSize;
         u8* src = File::readAllBytes(rFilePath, &srcSize);
         BinaryWriter* writer = new BinaryWriter(rFilePath, EndianSelect::Big);
@@ -86,7 +178,7 @@ namespace Yaz0 {
             u32 matchPos;
             u32 srcPosBak;
 
-            numBytes = compAdvanced(src, srcSize, ret.mSrcPos, &matchPos);
+            numBytes = encodeAdvancedSZS(src, srcSize, ret.mSrcPos, &matchPos);
             if (numBytes < 3) {
                 dst[ret.mDstPos] = src[ret.mSrcPos];
                 ret.mDstPos++;
@@ -144,7 +236,7 @@ namespace Yaz0 {
     }
 
     // This is faster, but the files it produces are larger
-    void fastComp(const std::string &rFilePath) {
+    void fastEncodeSZS(const std::string &rFilePath) {
         u32 srcSize;
         u8* src = File::readAllBytes(rFilePath, &srcSize);
         u32 pos = 0;
@@ -233,7 +325,7 @@ namespace Yaz0 {
         File::writeAllBytes(rFilePath, dst, dstOffs);
     }
 
-    u32 compSimple(u8*src, s32 size, s32 pos, u32 *pMatchPos) {
+    u32 encodeSimpleSZS(u8*src, s32 size, s32 pos, u32 *pMatchPos) {
         s32 startPos = pos - 0x1000;
         u32 byteCount = 1;
         u32 matchPos = 0;
@@ -263,7 +355,7 @@ namespace Yaz0 {
         return byteCount;
     }
 
-    u32 compAdvanced(u8* src, s32 size, s32 pos, u32 *pMatchPos)
+    u32 encodeAdvancedSZS(u8* src, s32 size, s32 pos, u32 *pMatchPos)
     {
         s32 startPos = pos - 0x1000;
         u32 numBytes = 1;
@@ -277,11 +369,11 @@ namespace Yaz0 {
             return numBytes1;
         }
         prevFlag = 0;
-        numBytes = compSimple(src, size, pos, &matchPos);
+        numBytes = encodeSimpleSZS(src, size, pos, &matchPos);
         *pMatchPos = matchPos;
 
         if (numBytes >= 3) {
-            numBytes1 = compSimple(src, size, pos + 1, &matchPos);
+            numBytes1 = encodeSimpleSZS(src, size, pos + 1, &matchPos);
             if (numBytes1 >= numBytes+2) {
                 numBytes = 1;
                 prevFlag = 1;

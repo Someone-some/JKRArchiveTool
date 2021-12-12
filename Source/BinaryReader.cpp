@@ -1,6 +1,8 @@
 #include "BinaryReader.h"
 #include "Util.h"
 #include <stdlib.h>
+#include <vector>
+#include <iostream>
 
 BinaryReader::BinaryReader(const std::string &rFilePath, EndianSelect endian) {
     mStream = new std::ifstream(rFilePath, std::ifstream::in | std::ifstream::binary);
@@ -17,7 +19,7 @@ BinaryReader::~BinaryReader() {
     delete mStream;
 
     if (mBuffer) 
-        delete[] mBuffer;
+        delete mBuffer;
 }
 
 u8 BinaryReader::readU8() {
@@ -128,14 +130,29 @@ u8 BinaryReader::peekU8() {
     return output;
 }
 
-u8* BinaryReader::readBytes(u32 count) {
-    u8* output = new u8[count];
+u8* BinaryReader::readBytes(const u32 count) {
+    if (mEndian == EndianSelect::Big) {
+        seek(position() + (count - 1), std::ios::beg);
+        u8* output = new u8[count];
 
-    for (s32 i = 0; i < count; i++) {
-        output[i] = readU8();
+        for (s32 i = 0; i < count; i++) {
+            output[i] = readU8();
+            seek(position() - 2, std::ios::beg);
+        }
+
+        return output;
+    }
+    else {
+        u8* output = new u8[count];
+
+        for (s32 i = 0; i < count; i++) {
+            output[i] = readU8();
+        }
+
+        return output;
     }
 
-    return output;
+    return nullptr;
 }
 
 u8* BinaryReader::readAllBytes() {

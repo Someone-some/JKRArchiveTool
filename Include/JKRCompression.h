@@ -1,0 +1,28 @@
+#pragma once
+
+#include <string>
+#include "BinaryReader.h"
+
+enum JKRCompressionType {
+    JKRCompressionType_NONE = 0x0,
+    JKRCompressionType_SZP = 0x1,
+    JKRCompressionType_SZS = 0x2,
+    JKRCompression_ASR = 0x3
+};
+
+namespace JKRCompression {
+    JKRCompressionType checkCompression(const std::string &);
+    u8* decode(const std::string &, u32 *);
+
+    u8* decodeSZS(const std::string &, u32 *);
+    u8* decodeSZP(const std::string &, u32 *);
+    u32 encodeSimpleSZS(u8 *, s32, s32, u32 *);
+    u32 encodeAdvancedSZS(u8 *, s32, s32, u32 *);
+    void encodeSZS(const std::string &);
+    void fastEncodeSZS(const std::string &);
+
+    struct Ret {
+        s32 mSrcPos;
+        s32 mDstPos;
+    };
+};
