@@ -124,22 +124,32 @@ std::string BinaryReader::readNullTerminatedString() {
     return output;
 }
 
+std::string BinaryReader::readNullTerminatedStringAt(const u32 &rPos) {
+    u32 curPos = position();
+    seek(rPos, std::ios::beg);
+    std::string ret = readNullTerminatedString();
+    seek(curPos, std::ios::beg);
+    return ret;
+}
+
 u8 BinaryReader::peekU8() {
     u8 output = readU8();
     seek(position() -1, std::ios::beg);
     return output;
 }
 
-u8* BinaryReader::readBytes(const u32 count) {
+u8* BinaryReader::readBytes(const u32 &count) {
     if (mEndian == EndianSelect::Big) {
-        seek(position() + (count - 1), std::ios::beg);
+        u32 curPos = position();
+        seek(curPos + (count - 1), std::ios::beg);
         u8* output = new u8[count];
 
         for (s32 i = 0; i < count; i++) {
             output[i] = readU8();
             seek(position() - 2, std::ios::beg);
         }
-
+        
+        seek(curPos + count, std::ios::beg);
         return output;
     }
     else {
@@ -159,7 +169,7 @@ u8* BinaryReader::readAllBytes() {
     return readBytes(size());
 }
 
-void BinaryReader::skip(u64 count) {
+void BinaryReader::skip(u32 count) {
     mStream->seekg(count, std::ifstream::cur);
 }
 
@@ -167,11 +177,11 @@ void BinaryReader::seek(u32 pos, std::ios::seekdir seekDir) {
     mStream->seekg(pos, seekDir);
 }
 
-u64 BinaryReader::position() {
+u32 BinaryReader::position() {
     return mStream->tellg();
 }
 
-u64 BinaryReader::size() {
+u32 BinaryReader::size() {
     u64 curPos = position();
     seek(0, std::ios::end);
     u64 endPos = position();

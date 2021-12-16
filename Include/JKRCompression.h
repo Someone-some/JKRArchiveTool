@@ -14,15 +14,11 @@ namespace JKRCompression {
     JKRCompressionType checkCompression(const std::string &);
     u8* decode(const std::string &, u32 *);
 
-    u8* decodeSZS(const std::string &, u32 *);
-    u8* decodeSZP(const std::string &, u32 *);
+    u8* decodeSZS(const u8*, u32);
+    u8* decodeSZP(const u8*, u32);
     u32 encodeSimpleSZS(u8 *, s32, s32, u32 *);
     u32 encodeAdvancedSZS(u8 *, s32, s32, u32 *);
     void encodeSZS(const std::string &);
     void fastEncodeSZS(const std::string &);
-
-    struct Ret {
-        s32 mSrcPos;
-        s32 mDstPos;
-    };
+    void encodeSZP(const std::string &);
 };

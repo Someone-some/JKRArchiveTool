@@ -18,13 +18,18 @@ int main(int argc, char*argv[]) {
             JKRArchive* pArchive;
 
             if (!pData) {
-                pArchive = new JKRArchive(filePath);
+                pArchive = new JKRArchive(filePath);       
             }
             else {
                 pArchive = new JKRArchive(pData, bufferSize);
             }
+            
+            std::string path = filePath;
+            u32 lastSlashIdx = path.rfind('\\');
+            std::string dir = path.substr(0, lastSlashIdx);
 
-            printf("Unpacking!\n");
+            printf("Unpacking!\n"); 
+            pArchive->unpack(dir);
         }
     }
     printf("Done!\n");

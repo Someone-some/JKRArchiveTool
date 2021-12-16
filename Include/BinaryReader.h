@@ -96,14 +96,16 @@ public:
     std::string readString(const u32 &);
     std::string readNullTerminatedString();
 
+    std::string readNullTerminatedStringAt(const u32 &);
+
     u8 peekU8();
-    u8* readBytes(const u32);
+    u8* readBytes(const u32 &);
     u8* readAllBytes();
     void close();
-    void skip(u64);
+    void skip(u32);
     void seek(u32, std::ios::seekdir);
-    u64 position();
-    u64 size();
+    u32 position();
+    u32 size();
 
     EndianSelect mEndian;
 private:

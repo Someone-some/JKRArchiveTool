@@ -24,24 +24,26 @@ namespace JKRCompression {
 
     u8* decode(const std::string &rFilePath, u32 *bufferSize) {
         JKRCompressionType compType = checkCompression(rFilePath);
+        u32 size;
+        u8* pData = File::readAllBytes(rFilePath, &size);
 
         switch (compType) {
             case JKRCompressionType::JKRCompressionType_NONE:
                 return nullptr;
             case JKRCompressionType::JKRCompressionType_SZP:
-                return decodeSZP(rFilePath, bufferSize);
+                return decodeSZP(pData, size);
             case JKRCompressionType::JKRCompressionType_SZS:
-                return decodeSZS(rFilePath, bufferSize);
+                return decodeSZS(pData, size);
             case JKRCompressionType::JKRCompression_ASR:
                 printf("Compression type not supported!\n");
-                return nullptr;
+                exit(1);
         }
 
         return nullptr;
     }
     
-    u8* decodeSZS(const std::string &rFilePath, u32 *bufferSize) {
-        BinaryReader* reader = new BinaryReader(rFilePath, EndianSelect::Big);
+    u8* decodeSZS(const u8*pData, u32 bufferSize) {
+        BinaryReader* reader = new BinaryReader(pData, bufferSize, EndianSelect::Big);
         if (reader->readString(0x4) != "Yaz0") {
             printf("Invalid identifier! Expected Yaz0\n");
             return nullptr;
@@ -49,7 +51,6 @@ namespace JKRCompression {
 
         u32 decompSize = reader->readU32();
         u8* dst = new u8[decompSize];
-        *bufferSize = decompSize;
         reader->skip(0x8);
         u32 dstPos = 0;
         u32 copySrc;
@@ -93,8 +94,8 @@ namespace JKRCompression {
         return dst;
     }
 
-    u8* decodeSZP(const std::string &rFilePath, u32 *bufferSize) {
-        BinaryReader* reader = new BinaryReader(rFilePath, EndianSelect::Big);
+    u8* decodeSZP(const u8*pData, u32 bufferSize) {
+        BinaryReader* reader = new BinaryReader(pData, bufferSize, EndianSelect::Big);
         if (reader->readString(0x4) != "Yay0") {
             printf("Invalid identifier! Expected Yay0\n");
             return nullptr;
@@ -105,8 +106,6 @@ namespace JKRCompression {
         u32 byteChunkAndCountModiferOffset = reader->readU32();
 
         u8* dst = new u8[decompSize];
-        *bufferSize = decompSize;
-
         s32 maskedBitCount = 0;
         s32 curOffsInDst = 0;
         s32 curMask = 0;
@@ -167,69 +166,70 @@ namespace JKRCompression {
         writer->writeU32(srcSize);
         writer->writePadding(0x0, 8);
         u8 dst[24];
-        Ret ret = {0, 0};
+        s32 srcPos = 0;
+        s32 dstPos = 0;
         s32 dstSize = 0;
         s32 percent = 0;
 
         u32 validBitCount = 0;
         u8 currCodeByte = 0;
-        while(ret.mSrcPos < srcSize) {
+        while(srcPos < srcSize) {
             u32 numBytes;
             u32 matchPos;
             u32 srcPosBak;
 
-            numBytes = encodeAdvancedSZS(src, srcSize, ret.mSrcPos, &matchPos);
+            numBytes = encodeAdvancedSZS(src, srcSize, srcPos, &matchPos);
             if (numBytes < 3) {
-                dst[ret.mDstPos] = src[ret.mSrcPos];
-                ret.mDstPos++;
-                ret.mSrcPos++;
+                dst[dstPos] = src[srcPos];
+                dstPos++;
+                srcPos++;
                 currCodeByte |= (0x80 >> validBitCount);
             }
             else {
-                u32 dist = ret.mSrcPos - matchPos - 1; 
+                u32 dist = srcPos - matchPos - 1; 
                 u8 byte1, byte2, byte3;
 
                 if (numBytes >= 0x12) {
                     byte1 = 0 | (dist >> 8);
                     byte2 = dist & 0xff;
-                    dst[ret.mDstPos++] = byte1;
-                    dst[ret.mDstPos++] = byte2;
+                    dst[dstPos++] = byte1;
+                    dst[dstPos++] = byte2;
 
                     if (numBytes > 0xff + 0x12)
                         numBytes = 0xff + 0x12;
                         
                     byte3 = numBytes - 0x12;
-                    dst[ret.mDstPos++] = byte3;
+                    dst[dstPos++] = byte3;
                 } 
                 else {
                     byte1 = ((numBytes - 2) << 4) | (dist >> 8);
                     byte2 = dist & 0xff;
-                    dst[ret.mDstPos++] = byte1;
-                    dst[ret.mDstPos++] = byte2; 
+                    dst[dstPos++] = byte1;
+                    dst[dstPos++] = byte2; 
                 }
-                ret.mSrcPos += numBytes;
+                srcPos += numBytes;
             }
             validBitCount++;
 
             if (validBitCount == 8) {
                 writer->writeU8(currCodeByte);
 
-                writer->writeBytes(dst, ret.mDstPos);
-                dstSize += ret.mDstPos + 1;
+                writer->writeBytes(dst, dstPos);
+                dstSize += dstPos + 1;
 
                 currCodeByte = 0;
                 validBitCount = 0;
-                ret.mDstPos = 0;
+                dstPos = 0;
             }
         }
         if (validBitCount > 0) {
             writer->writeU8(currCodeByte);
-            writer->writeBytes(dst, ret.mDstPos);
-            dstSize += ret.mDstPos + 1;
+            writer->writeBytes(dst, dstPos);
+            dstSize += dstPos + 1;
 
             currCodeByte = 0;
             validBitCount = 0;
-            ret.mDstPos = 0;
+            dstPos = 0;
         }
 
         writer->~BinaryWriter();
@@ -380,5 +380,19 @@ namespace JKRCompression {
             }
         }
         return numBytes;
+    }
+
+    void encodeSZP(const std::string &rFilePath) {
+        u32 size;
+        u8* src = File::readAllBytes(rFilePath, &size);
+        BinaryWriter* writer = new BinaryWriter(rFilePath, EndianSelect::Big);
+        writer->writeString("Yay0");
+        writer->writeU32(size);
+        u32 srcPos = 0;
+        u32 dstPos = 0;
+
+        while (srcPos < size) {
+            
+        }
     }
 };
