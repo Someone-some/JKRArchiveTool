@@ -3,6 +3,8 @@
 #include "JKRCompression.h"
 #include <vector>
 
+// Heavily based off https://github.com/SunakazeKun/pygapa/blob/main/jsystem/jkrarchive.py
+
 enum JKRFileAttr {
     JKRFileAttr_FILE = 0x1,
     JKRFileAttr_FOLDER = 0x2,
