@@ -13,6 +13,9 @@ enum JKRFileAttr {
     JKRFileAttr_LOAD_TO_ARAM = 0x20,
     JKRFileAttr_LOAD_FROM_DVD = 0x40,
     JKRFileAttr_USE_YAZ0 = 0x80,
+
+    JKRFileAttr_FILE_AND_COMPRESSION = 0x85,
+    JKRFileAttr_FILE_AND_PRELOAD = 0x71,
 };
 
 enum JKRPreloadType {
@@ -79,6 +82,7 @@ public:
     JKRCompressionType getCompressionType();
     bool isDirectory();
     bool isFile();
+    JKRPreloadType getPreloadType();
 
     JKRFileAttr mAttr;
     Node mNode;
@@ -94,15 +98,21 @@ public:
     JKRArchive(u8*, u32);
 
     void unpack(const std::string &);
+    void save(const std::string &);
+
+    std::vector<JKRFolderNode*> mFolderNodes;
+    std::vector<JKRDirectory*> mDirectories;
+    JKRFolderNode* mRoot = nullptr;
 
 private:
     void read(BinaryReader &);
+    void write(BinaryWriter &);
 
     JKRArchiveHeader mHeader;
     JKRArchiveDataHeader mDataHeader;
-    std::vector<JKRFolderNode*> mFolderNodes;
-    std::vector<JKRDirectory*> mDirectories;
 
-    JKRFolderNode* mRoot = nullptr;
+    std::vector<JKRDirectory*> mMRAMFiles;
+    std::vector<JKRDirectory*> mARAMFiles;
+    std::vector<JKRDirectory*> mDVDFiles;
     bool mSyncFileIds;
 };

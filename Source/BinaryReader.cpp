@@ -138,8 +138,8 @@ u8 BinaryReader::peekU8() {
     return output;
 }
 
-u8* BinaryReader::readBytes(const u32 &count) {
-    if (mEndian == EndianSelect::Big) {
+u8* BinaryReader::readBytes(const u32 &count, EndianSelect select) {
+    if (mEndian == EndianSelect::Big && select == EndianSelect::Big) {
         u32 curPos = position();
         seek(curPos + (count - 1), std::ios::beg);
         u8* output = new u8[count];

@@ -42,6 +42,23 @@ namespace JKRCompression {
 
         return nullptr;
     }
+
+    void encode(const std::string &rFilePath, JKRCompressionType CompType, bool fast) {
+        switch (CompType) {
+            case JKRCompressionType_SZS:
+                if (fast)
+                    fastEncodeSZS(rFilePath);
+                else 
+                    encodeSZS(rFilePath);
+            case JKRCompressionType_SZP: 
+                if (fast)
+                    printf("Fast compression doesn't exist for JKRCompressionType_SZP! Using normal compression\n");
+                encodeSZP(rFilePath);
+            case JKRCompressionType_ASR:
+                printf("Compression type: JKRCompressionType_ASR not supported!\n");
+                exit(1);
+        }
+    }
     
     u8* decodeSZS(const u8*pData, u32 bufferSize) {
         BinaryReader* reader = new BinaryReader(pData, bufferSize, EndianSelect::Big);
@@ -384,6 +401,8 @@ namespace JKRCompression {
     }
 
     void encodeSZP(const std::string &rFilePath) {
+        printf("Compression type: JKRCompressionType_SZP not implemented!\n");
+        exit(1);
         u32 size;
         u8* src = File::readAllBytes(rFilePath, &size);
         BinaryWriter* writer = new BinaryWriter(rFilePath, EndianSelect::Big);

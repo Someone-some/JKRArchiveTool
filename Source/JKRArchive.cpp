@@ -15,6 +15,12 @@ JKRArchive::JKRArchive(u8*pData, u32 size) {
     reader->~BinaryReader();
 }
 
+void JKRArchive::save(const std::string &rFilePath) {
+    BinaryWriter* writer = new BinaryWriter(rFilePath, EndianSelect::Big);
+    write(*writer);
+    writer->~BinaryWriter();
+}
+
 void JKRArchive::read(BinaryReader &rReader) {
     if (rReader.readString(0x4) != "RARC") {
         printf("Fatal error! File is not a valid JKRArchive");
@@ -61,7 +67,7 @@ void JKRArchive::read(BinaryReader &rReader) {
         else if (dir->isFile()) {
             u32 curPos = rReader.position();
             rReader.seek(mHeader.mFileDataOffset + mHeader.mHeaderSize + dir->mNode.mData, std::ios::beg);
-            u8* pData = rReader.readBytes(dir->mNode.mDataSize);
+            u8* pData = rReader.readBytes(dir->mNode.mDataSize, EndianSelect::Little);
             rReader.seek(curPos, std::ios::beg);
 
             if (dir->getCompressionType() == JKRCompressionType_SZS)
@@ -84,6 +90,10 @@ void JKRArchive::read(BinaryReader &rReader) {
             node->mChildDirs.push_back(childDir);
         }
     }
+}
+
+void JKRArchive::write(BinaryWriter &rWriter) {
+    
 }
 
 void JKRArchive::unpack(const std::string &rFilePath) {
@@ -130,4 +140,18 @@ bool JKRDirectory::isDirectory() {
 
 bool JKRDirectory::isFile() {
     return mAttr & JKRFileAttr_FILE;
+}
+
+JKRPreloadType JKRDirectory::getPreloadType() {
+    if (isFile()) {
+        if (mAttr & JKRFileAttr_LOAD_TO_MRAM)
+            return JKRPreloadType_MRAM;
+        else if (mAttr & JKRFileAttr_LOAD_TO_ARAM)
+            return JKRPreloadType_ARAM;
+        else if (mAttr & JKRFileAttr_LOAD_FROM_DVD) {
+            return JKRPreloadType_DVD;
+        }
+    }
+
+    return JKRPreloadType_NONE;
 }

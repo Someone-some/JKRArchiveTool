@@ -31,6 +31,24 @@ int main(int argc, char*argv[]) {
             printf("Unpacking!\n"); 
             pArchive->unpack(dir);
         }
+        else if (!strcasecmp(argv[i], "-p") || !strcasecmp(argv[i], "--pack")) {
+            JKRCompressionType compType;
+            bool fast = false;
+
+            for (s32 i = 1; i < argc; i++) {
+                if (!strcasecmp(argv[i], "--szs")) 
+                    compType = JKRCompressionType_SZS;
+                else if (!strcasecmp(argv[i], "--szp")) 
+                    compType = JKRCompressionType_SZP;
+                
+                if (!strcasecmp(argv[i], "-f") || !strcasecmp(argv[i], "--fast"))
+                    fast = true;
+            }
+
+            // do packing stuff
+
+            JKRCompression::encode(filePath, compType, fast);
+        }
     }
     printf("Done!\n");
     return 0;

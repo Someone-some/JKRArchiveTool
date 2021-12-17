@@ -99,7 +99,7 @@ public:
     std::string readNullTerminatedStringAt(const u32 &);
 
     u8 peekU8();
-    u8* readBytes(const u32 &);
+    u8* readBytes(const u32 &, EndianSelect = EndianSelect::Big);
     u8* readAllBytes();
     void close();
     void skip(u32);
