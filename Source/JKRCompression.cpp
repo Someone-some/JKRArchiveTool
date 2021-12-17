@@ -8,34 +8,35 @@ namespace JKRCompression {
         std::string magic = reader->readString(0x4);
 
         if (magic == "Yaz0")
-            return JKRCompressionType::JKRCompressionType_SZS;
+            return JKRCompressionType_SZS;
         else if (magic == "Yay0") 
-            return JKRCompressionType::JKRCompressionType_SZP;
+            return JKRCompressionType_SZP;
         else {
             reader->seek(0, std::ios::beg);
 
             if (reader->readString(0x3) == "ASR")
-                return JKRCompressionType::JKRCompression_ASR;
+                return JKRCompressionType_ASR;
         }
         
         reader->~BinaryReader();
-        return JKRCompressionType::JKRCompressionType_NONE;
+        return JKRCompressionType_NONE;
     }
 
     u8* decode(const std::string &rFilePath, u32 *bufferSize) {
         JKRCompressionType compType = checkCompression(rFilePath);
         u32 size;
+        *bufferSize = size;
         u8* pData = File::readAllBytes(rFilePath, &size);
 
         switch (compType) {
-            case JKRCompressionType::JKRCompressionType_NONE:
+            case JKRCompressionType_NONE:
                 return nullptr;
-            case JKRCompressionType::JKRCompressionType_SZP:
+            case JKRCompressionType_SZP:
                 return decodeSZP(pData, size);
             case JKRCompressionType::JKRCompressionType_SZS:
                 return decodeSZS(pData, size);
-            case JKRCompressionType::JKRCompression_ASR:
-                printf("Compression type not supported!\n");
+            case JKRCompressionType_ASR:
+                printf("Compression type: JKRCompressionType_ASR not supported!\n");
                 exit(1);
         }
 

@@ -7,7 +7,7 @@ enum JKRCompressionType {
     JKRCompressionType_NONE = 0x0,
     JKRCompressionType_SZP = 0x1,
     JKRCompressionType_SZS = 0x2,
-    JKRCompression_ASR = 0x3
+    JKRCompressionType_ASR = 0x3
 };
 
 namespace JKRCompression {

@@ -1,6 +1,7 @@
 #include "JKRArchive.h"
 #include <direct.h>
 #include <iostream>
+#include "Util.h"
 
 JKRArchive::JKRArchive(const std::string &rFileName) {
     BinaryReader* reader = new BinaryReader(rFileName, EndianSelect::Big);
@@ -51,21 +52,21 @@ void JKRArchive::read(BinaryReader &rReader) {
         dir->mAttr = (JKRFileAttr)(dir->mNode.mAttrAndNameOffs >> 24);
         dir->mName = rReader.readNullTerminatedStringAt(mDataHeader.mStringTableOffset + mHeader.mHeaderSize + nameOffs);
 
-        if (dir->mAttr & JKRFileAttr::JKRFileAttr_FOLDER && dir->mNode.mData != 0xFFFFFFFF) {
+        if (dir->isDirectory() && dir->mNode.mData != 0xFFFFFFFF) {
             dir->mFolderNode = mFolderNodes[dir->mNode.mData];
 
             if (dir->mFolderNode->mNode.mHash == dir->mNode.mHash)
                 dir->mFolderNode->mDirectory = dir;
         }
-        else if (dir->mAttr & JKRFileAttr::JKRFileAttr_FILE) {
+        else if (dir->isFile()) {
             u32 curPos = rReader.position();
             rReader.seek(mHeader.mFileDataOffset + mHeader.mHeaderSize + dir->mNode.mData, std::ios::beg);
             u8* pData = rReader.readBytes(dir->mNode.mDataSize);
             rReader.seek(curPos, std::ios::beg);
 
-            if (dir->getCompressionType() == JKRCompressionType::JKRCompressionType_SZS)
+            if (dir->getCompressionType() == JKRCompressionType_SZS)
                 pData = JKRCompression::decodeSZS(pData, dir->mNode.mDataSize);
-            else if (dir->getCompressionType() == JKRCompressionType::JKRCompressionType_SZP)
+            else if (dir->getCompressionType() == JKRCompressionType_SZP)
                 pData = JKRCompression::decodeSZP(pData, dir->mNode.mDataSize);
                 
             dir->mData = pData;
@@ -77,7 +78,7 @@ void JKRArchive::read(BinaryReader &rReader) {
     for (s32 i = 0; i < mFolderNodes.size(); i++) {
         JKRFolderNode* node = mFolderNodes[i];
 
-        for (s32 y = node->mNode.mFirstFileOffs; y < (node->mNode.mFirstFileOffs + node->mNode.mFileCount); y++) {
+        for (s32 y = node->mNode.mFirstFileOffs; y < (node->mNode.mFirstFileOffs + node->mNode.mFileCount); y++) {  
             JKRDirectory* childDir = mDirectories[y];
             childDir->mParentNode = node;
             node->mChildDirs.push_back(childDir);
@@ -89,16 +90,44 @@ void JKRArchive::unpack(const std::string &rFilePath) {
     std::string fullpath;
     fullpath = rFilePath + "/" + mRoot->mName;
     mkdir(fullpath.c_str());
+    mRoot->unpack(fullpath);
 }
+
+void JKRFolderNode::unpack(const std::string &rFilePath) {
+    std::string fullpath;
+    for (s32 i = 0; i < mChildDirs.size(); i++) {
+        
+        if (mChildDirs[i]->mName == "." || mChildDirs[i]->mName == "..")
+            continue;
+
+        fullpath = rFilePath + "/" + mChildDirs[i]->mName;
+
+        if (mChildDirs[i]->isDirectory()) {      
+            mkdir(fullpath.c_str());
+            mChildDirs[i]->mFolderNode->unpack(fullpath);
+        }
+        else if (mChildDirs[i]->isFile()) {
+            File::writeAllBytes(fullpath, mChildDirs[i]->mData, mChildDirs[i]->mNode.mDataSize);
+        }
+    }
+}
+
 
 JKRCompressionType JKRDirectory::getCompressionType() {
     if (mAttr & JKRFileAttr_FILE && mAttr & JKRFileAttr_COMPRESSED) {
         if (mAttr & JKRFileAttr_USE_YAZ0) 
-            return JKRCompressionType::JKRCompressionType_SZS;
+            return JKRCompressionType_SZS;
         else 
-            return JKRCompressionType::JKRCompressionType_SZP;
+            return JKRCompressionType_SZP;
     }
 
-    return JKRCompressionType::JKRCompressionType_NONE;
+    return JKRCompressionType_NONE;
 }
 
+bool JKRDirectory::isDirectory() {
+    return mAttr & JKRFileAttr_FOLDER;
+}
+
+bool JKRDirectory::isFile() {
+    return mAttr & JKRFileAttr_FILE;
+}

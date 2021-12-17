@@ -9,7 +9,7 @@ namespace File {
     }
 
     u8* readAllBytes(const std::string &rFilePath, u32 *byteCount) {
-        BinaryReader* reader = new BinaryReader(rFilePath, EndianSelect::Big);
+        BinaryReader* reader = new BinaryReader(rFilePath, EndianSelect::Little);
         u8* ret = reader->readAllBytes();
         *byteCount = reader->size();
         reader->~BinaryReader();

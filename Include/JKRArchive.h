@@ -55,6 +55,8 @@ public:
         u8 mShortName[4];
     };
 
+    void unpack(const std::string &);
+
     Node mNode;
     bool mIsRoot = false; 
     std::string mName;
@@ -75,11 +77,13 @@ public:
     };
 
     JKRCompressionType getCompressionType();
+    bool isDirectory();
+    bool isFile();
 
     JKRFileAttr mAttr;
     Node mNode;
     JKRFolderNode* mFolderNode;
-    JKRFolderNode* mParentNode;
+    JKRFolderNode* mParentNode = nullptr;
     std::string mName;
     u8* mData;
 };
