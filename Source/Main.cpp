@@ -1,9 +1,7 @@
 #include <iostream>
 #include <strings.h>
-#include "BinaryReader.h"
 #include "JKRCompression.h"
 #include "JKRArchive.h"
-#include "Util.h"
 
 int main(int argc, char*argv[]) {  
     u32 bufferSize;
@@ -13,25 +11,27 @@ int main(int argc, char*argv[]) {
 
     for (s32 i = 1; i < argc; i++) {
         if (!strcasecmp(argv[i], "-u") || !strcasecmp(argv[i], "--unpack")) {
-            printf("Decompressing!\n");
+            printf("Checking for compression!\n");
             u8* pData = JKRCompression::decode(filePath, &bufferSize);
-            JKRArchive* pArchive;
+            JKRArchive* archive;
 
             if (!pData) {
-                pArchive = new JKRArchive(filePath);       
+                archive = new JKRArchive(filePath);       
             }
             else {
-                pArchive = new JKRArchive(pData, bufferSize);
+                archive = new JKRArchive(pData, bufferSize);
             }
             
             std::string path = filePath;
             u32 lastSlashIdx = path.rfind('\\');
             std::string dir = path.substr(0, lastSlashIdx);
 
-            printf("Unpacking!\n"); 
-            pArchive->unpack(dir);
+            archive->unpack(dir);
+            free(archive);
         }
         else if (!strcasecmp(argv[i], "-p") || !strcasecmp(argv[i], "--pack")) {
+            printf("Packing!\n");
+    
             JKRCompressionType compType;
             bool fast = false;
 
@@ -45,11 +45,14 @@ int main(int argc, char*argv[]) {
                     fast = true;
             }
 
-            // do packing stuff
+            JKRArchive* archive = new JKRArchive();
+            archive->importFromFolder(filePath);
 
-            JKRCompression::encode(filePath, compType, fast);
+            printf("Compressing!\n");
+            //JKRCompression::encode(filePath, compType, fast);
+            free(archive);
         }
     }
-    printf("Done!\n");
+
     return 0;
 }

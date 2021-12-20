@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <numeric>
 #include <limits>
+#include "Util.h"
 #include "types.h"
 
 enum EndianSelect {
@@ -78,6 +79,20 @@ protected:
     }
 };
 
+namespace {
+    template <typename T>
+    void SwapEndian(T &val) {
+        union U {
+            T val;
+            std::array<u8, sizeof(T)> raw;
+        } src, dst;
+
+        src.val = val;
+        std::reverse_copy(src.raw.begin(), src.raw.end(), dst.raw.begin());
+        val = dst.val;
+    }
+};
+
 class BinaryReader {
 public:
     BinaryReader(const std::string &, EndianSelect);
@@ -85,20 +100,28 @@ public:
 
     ~BinaryReader();
 
-    u8 readU8();
-    s8 readS8();
-    u16 readU16();
-    s16 readS16();
-    u32 readU32();
-    s32 readS32();
-    u64 readU64();
-    s64 readS64();
+    template<typename T> 
+    T read() {
+        T output; 
+        mStream->read((char*)&output, sizeof(T));
+
+        if (mEndian == EndianSelect::Big && sizeof(T) > 1) 
+            SwapEndian(output);
+
+        return output;
+    }
+
     std::string readString(const u32 &);
     std::string readNullTerminatedString();
-
     std::string readNullTerminatedStringAt(const u32 &);
 
-    u8 peekU8();
+    template<typename T> 
+    T peek() {
+        T output = read<T>();
+        seek(position() - sizeof(T), std::ios::beg);
+        return output;
+    }
+
     u8* readBytes(const u32 &, EndianSelect = EndianSelect::Big);
     u8* readAllBytes();
     void close();
@@ -111,4 +134,30 @@ public:
 private:
     MemoryBuffer* mBuffer = nullptr;
     std::istream* mStream = nullptr;
+};
+
+class BinaryWriter {
+public:
+    BinaryWriter(const std::string &, EndianSelect);
+    BinaryWriter(const u8*, u32, EndianSelect);
+
+    ~BinaryWriter();
+
+    template<typename T>
+    void write(T val) {
+        if (mEndian == EndianSelect::Big && sizeof(T) > 1)
+            SwapEndian(val);
+        
+        mStream->write(reinterpret_cast<const char*>(&val), sizeof(T));
+    }
+
+    void writeString(std::string);
+
+    void writeBytes(const u8*, u32);
+    void writePadding(u8, u32);
+
+    EndianSelect mEndian;
+private:
+    MemoryBuffer* mBuffer = nullptr;
+    std::ostream* mStream = nullptr;
 };

@@ -1,33 +1,45 @@
 #include "JKRCompression.h"
-#include "BinaryWriter.h"
 #include "Util.h"
 
 namespace JKRCompression {
-    JKRCompressionType checkCompression(const std::string &rFilePath) {
-        BinaryReader* reader = new BinaryReader(rFilePath, EndianSelect::Big);
+    JKRCompressionType checkCompression(const std::string &filePath) {
+        BinaryReader* reader = new BinaryReader(filePath, EndianSelect::Big);
         std::string magic = reader->readString(0x4);
 
-        if (magic == "Yaz0")
+        if (magic == "Yaz0") {
+            printf("SZS compression found!\n");
+            reader->~BinaryReader();
             return JKRCompressionType_SZS;
-        else if (magic == "Yay0") 
+        }      
+        else if (magic == "Yay0") {
+            printf("SZP compression found!\n");
+            reader->~BinaryReader();
             return JKRCompressionType_SZP;
+        }         
         else {
             reader->seek(0, std::ios::beg);
 
-            if (reader->readString(0x3) == "ASR")
+            if (reader->readString(0x3) == "ASR") {
+                printf("ASR compression found!\n");
+                reader->~BinaryReader();
                 return JKRCompressionType_ASR;
+            }     
         }
-        
-        reader->~BinaryReader();
+        printf("No compression found!\n");
+
+        if (reader)
+            reader->~BinaryReader();
+
         return JKRCompressionType_NONE;
     }
 
-    u8* decode(const std::string &rFilePath, u32 *bufferSize) {
-        JKRCompressionType compType = checkCompression(rFilePath);
+    u8* decode(const std::string &filePath, u32 *bufferSize) {
+        JKRCompressionType compType = checkCompression(filePath);
         u32 size;
         *bufferSize = size;
-        u8* pData = File::readAllBytes(rFilePath, &size);
+        u8* pData = File::readAllBytes(filePath, &size);
 
+        printf("Decompressing!\n");
         switch (compType) {
             case JKRCompressionType_NONE:
                 return nullptr;
@@ -43,17 +55,17 @@ namespace JKRCompression {
         return nullptr;
     }
 
-    void encode(const std::string &rFilePath, JKRCompressionType CompType, bool fast) {
+    void encode(const std::string &filePath, JKRCompressionType CompType, bool fast) {
         switch (CompType) {
             case JKRCompressionType_SZS:
                 if (fast)
-                    fastEncodeSZS(rFilePath);
+                    fastEncodeSZS(filePath);
                 else 
-                    encodeSZS(rFilePath);
+                    encodeSZS(filePath);
             case JKRCompressionType_SZP: 
                 if (fast)
                     printf("Fast compression doesn't exist for JKRCompressionType_SZP! Using normal compression\n");
-                encodeSZP(rFilePath);
+                encodeSZP(filePath);
             case JKRCompressionType_ASR:
                 printf("Compression type: JKRCompressionType_ASR not supported!\n");
                 exit(1);
@@ -67,7 +79,7 @@ namespace JKRCompression {
             return nullptr;
         }
 
-        u32 decompSize = reader->readU32();
+        u32 decompSize = reader->read<u32>();
         u8* dst = new u8[decompSize];
         reader->skip(0x8);
         u32 dstPos = 0;
@@ -75,22 +87,22 @@ namespace JKRCompression {
         u32 copyLen;
 
         while (dstPos < decompSize) {
-            u8 block = reader->readU8();
+            u8 block = reader->read<u8>();     
 
             for (u32 i = 0; i < 8; i++) {
                 if ((block & 0x80) != 0) {     
-                    dst[dstPos] = reader->readU8();
+                    dst[dstPos] = reader->read<u8>();
                     dstPos++;
                 }
                 else {
-                    u8 byte1 = reader->readU8();
-                    u8 byte2 = reader->readU8();
+                    u8 byte1 = reader->read<u8>();
+                    u8 byte2 = reader->read<u8>();
 
                     copySrc = dstPos - ((byte1 & 0x0F) << 8 | byte2) -1;
 
                     copyLen = byte1 >> 4;
                     if (copyLen == 0) 
-                        copyLen = reader->readU8() + 0x12;
+                        copyLen = reader->read<u8>() + 0x12;
                     else 
                         copyLen += 2;
 
@@ -119,9 +131,9 @@ namespace JKRCompression {
             return nullptr;
         }
 
-        u32 decompSize = reader->readU32();
-        u32 linkTableOffs = reader->readU32();
-        u32 byteChunkAndCountModiferOffset = reader->readU32();
+        u32 decompSize = reader->read<u32>();
+        u32 linkTableOffs = reader->read<u32>();
+        u32 byteChunkAndCountModiferOffset = reader->read<u32>();
 
         u8* dst = new u8[decompSize];
         s32 maskedBitCount = 0;
@@ -130,20 +142,20 @@ namespace JKRCompression {
 
         while (curOffsInDst < decompSize) {
             if (maskedBitCount == 0) {
-                curMask = reader->readS32();
+                curMask = reader->read<s32>();
                 maskedBitCount = 32;
             }
 
             if (((u32)curMask & (u32)0x80000000) == 0x80000000) {
                 u64 curPos = reader->position();
                 reader->seek(byteChunkAndCountModiferOffset++, std::ios::beg);
-                dst[curOffsInDst++] = reader->readU8();
+                dst[curOffsInDst++] = reader->read<u8>();
                 reader->seek(curPos, std::ios::beg);
             }
             else {
                 u64 curPos = reader->position();
                 reader->seek(linkTableOffs++, std::ios::beg);
-                u16 link = reader->readU16();
+                u16 link = reader->read<u16>();
                 linkTableOffs += 2;
                 reader->seek(curPos, std::ios::beg);
 
@@ -153,7 +165,7 @@ namespace JKRCompression {
                 if (count == 0) {
                     u64 curPos = reader->position();
                     reader->seek(byteChunkAndCountModiferOffset++, std::ios::beg);
-                    u8 countModifer = reader->readU8();
+                    u8 countModifer = reader->read<u8>();
                     reader->seek(curPos, std::ios::beg);
                     count += countModifer + 0x12;
                 }
@@ -176,12 +188,12 @@ namespace JKRCompression {
         return dst;
     }
 
-    void encodeSZS(const std::string &rFilePath) {
+    void encodeSZS(const std::string &filePath) {
         u32 srcSize;
-        u8* src = File::readAllBytes(rFilePath, &srcSize);
-        BinaryWriter* writer = new BinaryWriter(rFilePath, EndianSelect::Big);
+        u8* src = File::readAllBytes(filePath, &srcSize);
+        BinaryWriter* writer = new BinaryWriter(filePath, EndianSelect::Big);
         writer->writeString("Yaz0");
-        writer->writeU32(srcSize);
+        writer->write<u32>(srcSize);
         writer->writePadding(0x0, 8);
         u8 dst[24];
         s32 srcPos = 0;
@@ -230,7 +242,7 @@ namespace JKRCompression {
             validBitCount++;
 
             if (validBitCount == 8) {
-                writer->writeU8(currCodeByte);
+                writer->write<u8>(currCodeByte);
 
                 writer->writeBytes(dst, dstPos);
                 dstSize += dstPos + 1;
@@ -241,7 +253,7 @@ namespace JKRCompression {
             }
         }
         if (validBitCount > 0) {
-            writer->writeU8(currCodeByte);
+            writer->write<u8>(currCodeByte);
             writer->writeBytes(dst, dstPos);
             dstSize += dstPos + 1;
 
@@ -400,14 +412,14 @@ namespace JKRCompression {
         return numBytes;
     }
 
-    void encodeSZP(const std::string &rFilePath) {
+    void encodeSZP(const std::string &filePath) {
         printf("Compression type: JKRCompressionType_SZP not implemented!\n");
         exit(1);
         u32 size;
-        u8* src = File::readAllBytes(rFilePath, &size);
-        BinaryWriter* writer = new BinaryWriter(rFilePath, EndianSelect::Big);
+        u8* src = File::readAllBytes(filePath, &size);
+        BinaryWriter* writer = new BinaryWriter(filePath, EndianSelect::Big);
         writer->writeString("Yay0");
-        writer->writeU32(size);
+        writer->write<u32>(size);
         u32 srcPos = 0;
         u32 dstPos = 0;
 

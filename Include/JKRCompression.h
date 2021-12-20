@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "BinaryReader.h"
+#include "BinaryReaderAndWriter.h"
 
 enum JKRCompressionType {
     JKRCompressionType_NONE = 0x0,

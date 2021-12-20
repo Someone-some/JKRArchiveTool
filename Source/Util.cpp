@@ -1,15 +1,15 @@
 #include "Util.h"
-#include "BinaryWriter.h"
+#include "BinaryReaderAndWriter.h"
 
 namespace File {
-    void writeAllBytes(const std::string &rFilePath, const u8 *pBytes, u32 bufferSize) {
-        BinaryWriter* writer = new BinaryWriter(rFilePath, EndianSelect::Little);
+    void writeAllBytes(const std::string &filePath, const u8 *pBytes, u32 bufferSize) {
+        BinaryWriter* writer = new BinaryWriter(filePath, EndianSelect::Little);
         writer->writeBytes(pBytes, bufferSize);
         writer->~BinaryWriter();
     }
 
-    u8* readAllBytes(const std::string &rFilePath, u32 *byteCount) {
-        BinaryReader* reader = new BinaryReader(rFilePath, EndianSelect::Little);
+    u8* readAllBytes(const std::string &filePath, u32 *byteCount) {
+        BinaryReader* reader = new BinaryReader(filePath, EndianSelect::Little);
         u8* ret = reader->readAllBytes();
         *byteCount = reader->size();
         reader->~BinaryReader();

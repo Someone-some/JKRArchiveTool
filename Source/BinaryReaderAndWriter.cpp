@@ -1,5 +1,4 @@
-#include "BinaryReader.h"
-#include "Util.h"
+#include "BinaryReaderAndWriter.h"
 #include <stdlib.h>
 #include <vector>
 #include <iostream>
@@ -22,78 +21,6 @@ BinaryReader::~BinaryReader() {
         delete mBuffer;
 }
 
-u8 BinaryReader::readU8() {
-    u8 output;
-    mStream->read((char*)&output, 1);
-    return output;
-}
-
-s8 BinaryReader::readS8()  {
-    s8 output;
-    mStream->read((char*)&output, 1);
-    return output;
-}
-
-u16 BinaryReader::readU16() {
-    u16 output;
-    mStream->read((char*)&output, 2);
-
-    if (mEndian == EndianSelect::Big) 
-        Util::SwapEndian(output);
-
-    return output; 
-}
-
-s16 BinaryReader::readS16() {
-    s16 output;
-    mStream->read((char*)&output, 2);
-
-    if (mEndian == EndianSelect::Big) 
-        Util::SwapEndian(output);
-
-    return output; 
-}
-
-u32 BinaryReader::readU32() {
-    u32 output;
-    mStream->read((char*)&output, 4);
-
-    if (mEndian == EndianSelect::Big)
-        Util::SwapEndian(output);
-
-    return output;
-}
-
-s32 BinaryReader::readS32() {
-    s32 output;
-    mStream->read((char*)&output, 4);
-
-    if (mEndian == EndianSelect::Big)
-        Util::SwapEndian(output);
-
-    return output;
-}
-
-u64 BinaryReader::readU64() {
-    u64 output;
-    mStream->read((char*)&output, 8);
-
-    if (mEndian == EndianSelect::Big)
-        Util::SwapEndian(output);
-
-    return output;
-}
-
-s64 BinaryReader::readS64() {
-    s64 output;
-    mStream->read((char*)&output, 8);
-
-    if (mEndian == EndianSelect::Big)
-        Util::SwapEndian(output);
-
-    return output;
-}
-
 std::string BinaryReader::readString(const u32 &rLength) {
     std::string output;
     output.reserve(rLength);
@@ -111,7 +38,7 @@ std::string BinaryReader::readString(const u32 &rLength) {
 
 std::string BinaryReader::readNullTerminatedString() {
     std::string output = "";
-    while (peekU8() != '\0') {
+    while (peek<u8>() != '\0') {
         u8 buffer;
         mStream->read((char*)&buffer, 1);
         output.push_back(buffer);
@@ -132,12 +59,6 @@ std::string BinaryReader::readNullTerminatedStringAt(const u32 &rPos) {
     return ret;
 }
 
-u8 BinaryReader::peekU8() {
-    u8 output = readU8();
-    seek(position() -1, std::ios::beg);
-    return output;
-}
-
 u8* BinaryReader::readBytes(const u32 &count, EndianSelect select) {
     if (mEndian == EndianSelect::Big && select == EndianSelect::Big) {
         u32 curPos = position();
@@ -145,7 +66,7 @@ u8* BinaryReader::readBytes(const u32 &count, EndianSelect select) {
         u8* output = new u8[count];
 
         for (s32 i = 0; i < count; i++) {
-            output[i] = readU8();
+            output[i] = read<u8>();
             seek(position() - 2, std::ios::beg);
         }
         
@@ -156,7 +77,7 @@ u8* BinaryReader::readBytes(const u32 &count, EndianSelect select) {
         u8* output = new u8[count];
 
         for (s32 i = 0; i < count; i++) {
-            output[i] = readU8();
+            output[i] = read<u8>();
         }
 
         return output;
@@ -190,4 +111,38 @@ u32 BinaryReader::size() {
         seek(curPos, std::ios::beg);
 
     return endPos;
+}
+
+BinaryWriter::BinaryWriter(const std::string &rFileName, EndianSelect endian) {
+    mStream = new std::ofstream(rFileName, std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
+    mEndian = endian;
+}
+
+BinaryWriter::BinaryWriter(const u8* buffer, u32 size, EndianSelect endian) {
+    mBuffer = new MemoryBuffer(buffer, size);
+    mStream = new std::ostream(mBuffer);
+    mEndian = endian;
+}
+
+BinaryWriter::~BinaryWriter() {
+    delete mStream;
+
+    if (mBuffer)
+        delete[] mBuffer;
+}
+
+void BinaryWriter::writeString(std::string Str) {
+    mStream->write(Str.data(), Str.size());
+}
+
+void BinaryWriter::writeBytes(const u8 *bytes, u32 amount) {
+    for (s32 i = 0; i < amount; i++) {
+        write<u8>(bytes[i]);
+    }
+}
+
+void BinaryWriter::writePadding(u8 value, u32 amount) {
+    for (s32 i = 0; i < amount; i++) {
+        write<u8>(value);
+    }
 }

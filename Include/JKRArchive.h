@@ -1,5 +1,4 @@
-#include "BinaryReader.h"
-#include "BinaryWriter.h"
+#include "BinaryReaderAndWriter.h"
 #include "JKRCompression.h"
 #include <vector>
 
@@ -44,6 +43,7 @@ struct JKRArchiveDataHeader {
     u32 mDirNodeCount;
 };
 
+class JKRArchive;
 class JKRDirectory;
 
 class JKRFolderNode {
@@ -59,6 +59,7 @@ public:
     };
 
     void unpack(const std::string &);
+    void importFromFolder(const std::string &, const JKRArchive &);
 
     Node mNode;
     bool mIsRoot = false; 
@@ -69,7 +70,7 @@ public:
 
 class JKRDirectory {
 public:
-    JKRDirectory() {}
+    JKRDirectory();
 
     struct Node {
         u32 mDataSize;
@@ -80,25 +81,28 @@ public:
     };
 
     JKRCompressionType getCompressionType();
-    bool isDirectory();
-    bool isFile();
+    bool isDirectory() { return mAttr & JKRFileAttr_FOLDER; } 
+    bool isFile() { return mAttr & JKRFileAttr_FILE; }
+    bool isShortcut() { return mAttr & JKRFileAttr_FILE && (!strcmp(mName.c_str(), "..") || !strcmp(mName.c_str(), ".")); }
     JKRPreloadType getPreloadType();
 
     JKRFileAttr mAttr;
     Node mNode;
     JKRFolderNode* mFolderNode;
-    JKRFolderNode* mParentNode = nullptr;
+    JKRFolderNode* mParentNode;
     std::string mName;
     u8* mData;
 };
 
 class JKRArchive {
 public:
+    JKRArchive() {}
     JKRArchive(const std::string &);
     JKRArchive(u8*, u32);
 
     void unpack(const std::string &);
     void save(const std::string &);
+    void importFromFolder(const std::string &);
 
     std::vector<JKRFolderNode*> mFolderNodes;
     std::vector<JKRDirectory*> mDirectories;
@@ -107,6 +111,25 @@ public:
 private:
     void read(BinaryReader &);
     void write(BinaryWriter &);
+    void sortNodesAndDirs();
+
+    s32 getNodeIndex(JKRFolderNode *pNode) {
+        for (s32 i = 0; i < mFolderNodes.size(); i++) {
+            if (mFolderNodes[i] = pNode) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    s32 getDirIndex(JKRDirectory *pDir) {
+        for (s32 i = 0; i < mDirectories.size(); i++) {
+            if (mDirectories[i] = pDir) {
+                return i;
+            }
+        }
+        return 0;
+    }
 
     JKRArchiveHeader mHeader;
     JKRArchiveDataHeader mDataHeader;
