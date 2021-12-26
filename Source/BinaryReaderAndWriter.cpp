@@ -128,11 +128,16 @@ BinaryWriter::~BinaryWriter() {
     delete mStream;
 
     if (mBuffer)
-        delete[] mBuffer;
+        delete mBuffer;
 }
 
-void BinaryWriter::writeString(std::string Str) {
+void BinaryWriter::writeString(const std::string &Str) {
     mStream->write(Str.data(), Str.size());
+}
+
+void BinaryWriter::writeNullTerminatedString(const std::string &Str) {
+    mStream->write(Str.data(), Str.size());
+    write<u8>('\0');
 }
 
 void BinaryWriter::writeBytes(const u8 *bytes, u32 amount) {
@@ -144,5 +149,69 @@ void BinaryWriter::writeBytes(const u8 *bytes, u32 amount) {
 void BinaryWriter::writePadding(u8 value, u32 amount) {
     for (s32 i = 0; i < amount; i++) {
         write<u8>(value);
+    }
+}
+
+void BinaryWriter::seek(u32 pos, std::ios::seekdir dir) {
+    mStream->seekp(pos, dir);
+}
+
+u32 BinaryWriter::size() {
+    u32 curPos = mStream->tellp();
+    seek(0, std::ios::end);
+    u32 endPos = mStream->tellp();
+
+    if(curPos != endPos)
+        seek(curPos, std::ios::beg);
+
+    return endPos;
+}
+
+void BinaryWriter::align32() {
+    while ((mStream->tellp() % 32) != 0) {
+        writePadding(0x0, 1);
+    }
+}
+
+const u8* BinaryWriter::getBuffer() {
+    return mBuffer->mBuffer;
+}
+
+StringPool::StringPool(StringPoolFormat format) {
+    mFormat = format;
+    mLookUp = true;
+}
+
+s32 StringPool::write(const std::string &string) {
+    s32 offset = 0;
+    if (mLookUp && mOffsets.find(packString(string)) != mOffsets.end()) {
+        offset = mOffsets[packString(string)];
+    }
+    else {
+        offset = mBuffer.size();
+        std::string addMe = packString(string);
+        mOffsets[addMe] = offset;
+
+        for (s32 i = 0; i < addMe.size(); i++) {
+            mBuffer.push_back(addMe[i]);
+        }
+    }
+
+    return offset;
+}
+
+u32 StringPool::find(const std::string &string) {
+    if (mOffsets.find(packString(string)) != mOffsets.end()) {
+        return mOffsets[packString(string)];
+    }
+}
+
+void StringPool::align32() {
+    s32 padLen = mBuffer.size();
+
+    if (padLen != 0) {
+        for (s32 i = 0; i < padLen; i++) {
+            mBuffer.push_back(padLen);
+        }
     }
 }

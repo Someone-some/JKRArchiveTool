@@ -39,13 +39,14 @@ namespace JKRCompression {
         *bufferSize = size;
         u8* pData = File::readAllBytes(filePath, &size);
 
-        printf("Decompressing!\n");
         switch (compType) {
             case JKRCompressionType_NONE:
                 return nullptr;
             case JKRCompressionType_SZP:
+                printf("Decompressing!\n");
                 return decodeSZP(pData, size);
             case JKRCompressionType::JKRCompressionType_SZS:
+                printf("Decompressing!\n");
                 return decodeSZS(pData, size);
             case JKRCompressionType_ASR:
                 printf("Compression type: JKRCompressionType_ASR not supported!\n");
@@ -62,13 +63,16 @@ namespace JKRCompression {
                     fastEncodeSZS(filePath);
                 else 
                     encodeSZS(filePath);
+                    break;
             case JKRCompressionType_SZP: 
                 if (fast)
                     printf("Fast compression doesn't exist for JKRCompressionType_SZP! Using normal compression\n");
                 encodeSZP(filePath);
+                break;
             case JKRCompressionType_ASR:
                 printf("Compression type: JKRCompressionType_ASR not supported!\n");
                 exit(1);
+                break;
         }
     }
     

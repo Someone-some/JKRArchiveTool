@@ -15,4 +15,12 @@ namespace File {
         reader->~BinaryReader();
         return ret;
     }
+
+    bool FileExists(const std::string &filePath) {
+        std::ifstream test(filePath.c_str());
+        if (!test)
+            return false;
+        else
+            return true;
+    }
 };

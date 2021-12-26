@@ -1,6 +1,7 @@
 #include "BinaryReaderAndWriter.h"
 #include "JKRCompression.h"
 #include <vector>
+#include <strings.h>
 
 // Heavily based off https://github.com/SunakazeKun/pygapa/blob/main/jsystem/jkrarchive.py
 
@@ -59,7 +60,7 @@ public:
     };
 
     void unpack(const std::string &);
-    void importFromFolder(const std::string &, const JKRArchive &);
+    std::string getShortName();
 
     Node mNode;
     bool mIsRoot = false; 
@@ -83,7 +84,11 @@ public:
     JKRCompressionType getCompressionType();
     bool isDirectory() { return mAttr & JKRFileAttr_FOLDER; } 
     bool isFile() { return mAttr & JKRFileAttr_FILE; }
-    bool isShortcut() { return mAttr & JKRFileAttr_FILE && (!strcmp(mName.c_str(), "..") || !strcmp(mName.c_str(), ".")); }
+    bool isShortcut() { 
+        if (mName == ".." || mName == ".")
+            return mAttr & JKRFileAttr_FOLDER; 
+        return false;
+    }
     JKRPreloadType getPreloadType();
 
     JKRFileAttr mAttr;
@@ -91,6 +96,7 @@ public:
     JKRFolderNode* mFolderNode;
     JKRFolderNode* mParentNode;
     std::string mName;
+    u16 mNameOffs;
     u8* mData;
 };
 
@@ -101,8 +107,11 @@ public:
     JKRArchive(u8*, u32);
 
     void unpack(const std::string &);
-    void save(const std::string &);
+    void save(const std::string &, bool);
     void importFromFolder(const std::string &);
+    JKRDirectory* createDir(const std::string &, JKRFileAttr, JKRFolderNode*, JKRFolderNode*);
+    JKRDirectory* createFile(const std::string &, JKRFolderNode*);
+    JKRFolderNode* createFolder(const std::string &, JKRFolderNode*);
 
     std::vector<JKRFolderNode*> mFolderNodes;
     std::vector<JKRDirectory*> mDirectories;
@@ -110,26 +119,20 @@ public:
 
 private:
     void read(BinaryReader &);
-    void write(BinaryWriter &);
+    void write(BinaryWriter &, bool);
+    void writeFileData(BinaryWriter &, std::vector<JKRDirectory*>, u32 *);
+
     void sortNodesAndDirs();
+    void sortNodeAndDirs(JKRFolderNode*);
+    bool validateName(JKRFolderNode*, const std::string &);
 
-    s32 getNodeIndex(JKRFolderNode *pNode) {
-        for (s32 i = 0; i < mFolderNodes.size(); i++) {
-            if (mFolderNodes[i] = pNode) {
-                return i;
-            }
-        }
-        return 0;
+    void collectStrings(JKRFolderNode*, StringPool*, bool);
+
+    s32 align32(s32 val) {
+        return (val + 0x1F) & ~0x1F;
     }
 
-    s32 getDirIndex(JKRDirectory *pDir) {
-        for (s32 i = 0; i < mDirectories.size(); i++) {
-            if (mDirectories[i] = pDir) {
-                return i;
-            }
-        }
-        return 0;
-    }
+    u16 nameHash(const std::string &);
 
     JKRArchiveHeader mHeader;
     JKRArchiveDataHeader mDataHeader;
@@ -137,5 +140,6 @@ private:
     std::vector<JKRDirectory*> mMRAMFiles;
     std::vector<JKRDirectory*> mARAMFiles;
     std::vector<JKRDirectory*> mDVDFiles;
-    bool mSyncFileIds;
+    bool mSyncFileIds = true;
+    u16 mNextFileIdx = 0;
 };

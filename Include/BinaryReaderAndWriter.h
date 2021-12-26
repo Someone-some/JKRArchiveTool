@@ -4,6 +4,8 @@
 #include <string>
 #include <string.h>
 #include <streambuf>
+#include <vector>
+#include <map>
 #include <algorithm>
 #include <numeric>
 #include <limits>
@@ -145,19 +147,54 @@ public:
 
     template<typename T>
     void write(T val) {
-        if (mEndian == EndianSelect::Big && sizeof(T) > 1)
+        if (mEndian == EndianSelect::Big)
             SwapEndian(val);
         
         mStream->write(reinterpret_cast<const char*>(&val), sizeof(T));
     }
 
-    void writeString(std::string);
+    void writeString(const std::string &);
+    void writeNullTerminatedString(const std::string &);
 
     void writeBytes(const u8*, u32);
     void writePadding(u8, u32);
+
+    void seek(u32, std::ios::seekdir);
+    u32 size();
+    void align32();
+
+    const u8* getBuffer();
 
     EndianSelect mEndian;
 private:
     MemoryBuffer* mBuffer = nullptr;
     std::ostream* mStream = nullptr;
+};
+
+enum StringPoolFormat {
+    StringPoolFormat_NULL_TERMINATED,
+    StringPoolFormat_NOT_NULL_TERMINATED
+};
+
+class StringPool {
+public:
+    StringPool(StringPoolFormat);
+
+    s32 write(const std::string &);
+    u32 find(const std::string &);
+    u32 size() { return mBuffer.size(); }
+    void align32();
+
+    bool mLookUp;
+    std::vector<u8> mBuffer;
+private:
+    std::string packString(const std::string &string) {
+        std::string ret = string;
+        if (mFormat == StringPoolFormat_NULL_TERMINATED && string.back() != '\0')
+            ret.push_back('\0');
+        return ret;
+    }
+
+    StringPoolFormat mFormat;
+    std::map<std::string, s32> mOffsets;
 };
