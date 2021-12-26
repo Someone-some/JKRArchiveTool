@@ -1,7 +1,6 @@
 #include "BinaryReaderAndWriter.h"
 #include <stdlib.h>
 #include <vector>
-#include <iostream>
 
 BinaryReader::BinaryReader(const std::string &rFilePath, EndianSelect endian) {
     mStream = new std::ifstream(rFilePath, std::ifstream::in | std::ifstream::binary);

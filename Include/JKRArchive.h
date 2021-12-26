@@ -85,7 +85,7 @@ public:
     bool isDirectory() { return mAttr & JKRFileAttr_FOLDER; } 
     bool isFile() { return mAttr & JKRFileAttr_FILE; }
     bool isShortcut() { 
-        if (mName == ".." || mName == ".")
+        if (!mName.compare("..") || !mName.compare("."))
             return mAttr & JKRFileAttr_FOLDER; 
         return false;
     }
@@ -133,6 +133,8 @@ private:
     }
 
     u16 nameHash(const std::string &);
+
+    void importNode(const std::string &, JKRFolderNode*);
 
     JKRArchiveHeader mHeader;
     JKRArchiveDataHeader mDataHeader;

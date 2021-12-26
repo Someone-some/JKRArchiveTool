@@ -1,7 +1,6 @@
 #include "JKRArchive.h"
 #include <direct.h>
 #include <dirent.h>
-#include <iostream>
 #include "Util.h"
 
 JKRArchive::JKRArchive(const std::string &filePath) {
@@ -30,29 +29,34 @@ void JKRArchive::unpack(const std::string &filePath) {
 }
 
 void JKRArchive::importFromFolder(const std::string &filePath) {
-    u32 lastSlashIdx = filePath.rfind('\\');
-    std::string name = filePath.substr(lastSlashIdx + 1);
-    mRoot = new JKRFolderNode();
-    mRoot->mIsRoot = true;
-    mRoot->mName = name;
-    mFolderNodes.push_back(mRoot);
-    createDir(".", JKRFileAttr_FOLDER, mRoot, mRoot);
-    createDir("..", JKRFileAttr_FOLDER, nullptr, mRoot);
+    if (!mRoot) {
+        u32 lastSlashIdx = filePath.rfind('\\');
+        std::string name = filePath.substr(lastSlashIdx + 1);
+        mRoot = new JKRFolderNode();
+        mRoot->mIsRoot = true;
+        mRoot->mName = name;
+        mFolderNodes.push_back(mRoot);
+        createDir(".", JKRFileAttr_FOLDER, mRoot, mRoot);
+        createDir("..", JKRFileAttr_FOLDER, nullptr, mRoot);
+    }
 
-    DIR* dir = opendir(filePath.c_str());
+    importNode(filePath, mRoot);
+}
+
+void JKRArchive::importNode(const std::string &filepath, JKRFolderNode*pParentNode) {
+    DIR* dir = opendir(filepath.c_str());
     dirent* ent;
 
     while ((ent = readdir(dir))) {
         if (!strcmp(ent->d_name, "..") || !strcmp(ent->d_name, "."))
-            continue; 
-
+            continue;        
         if (ent->d_type == DT_DIR) {
-            createDir(ent->d_name, JKRFileAttr_FOLDER, createFolder(ent->d_name, mRoot), mRoot);
+            JKRFolderNode* node = createFolder(ent->d_name, pParentNode);
+            importNode(filepath + "\\" + ent->d_name, node);
         }
-        else if (ent->d_type == DT_REG) {
-            std::cout << ent->d_name << '\n';
-            JKRDirectory* file = createFile(ent->d_name, mRoot);
-            file->mData = File::readAllBytes(filePath + "/" + ent->d_name, &file->mNode.mDataSize);
+        else if (ent->d_type == DT_REG) {       
+            JKRDirectory* file = createFile(ent->d_name, pParentNode);
+            file->mData = File::readAllBytes(filepath + "/" + ent->d_name, &file->mNode.mDataSize);
         }
     }
 }
@@ -86,7 +90,7 @@ JKRFolderNode* JKRArchive::createFolder(const std::string &folderName, JKRFolder
     newFolder->mName = folderName;
     mFolderNodes.push_back(newFolder);
 
-    createDir(newFolder->mName, JKRFileAttr_FOLDER, newFolder, pParentNode);
+    newFolder->mDirectory = createDir(newFolder->mName, JKRFileAttr_FOLDER, newFolder, pParentNode);
     createDir(".", JKRFileAttr_FOLDER, newFolder, newFolder);
     createDir("..", JKRFileAttr_FOLDER, pParentNode, newFolder);
     return newFolder;
@@ -275,6 +279,8 @@ void JKRArchive::sortNodeAndDirs(JKRFolderNode*pNode) {
         pNode->mChildDirs.push_back(dir);
     }
 
+    shortcuts.clear();
+
     pNode->mNode.mFirstFileOffs = mDirectories.size();
     pNode->mNode.mFileCount = pNode->mChildDirs.size();
 
@@ -282,8 +288,9 @@ void JKRArchive::sortNodeAndDirs(JKRFolderNode*pNode) {
         mDirectories.push_back(pNode->mChildDirs[i]);
 
     for (JKRDirectory* dir : pNode->mChildDirs) {
-        if (dir->isDirectory() && !dir->isShortcut())
+        if (dir->isDirectory() && !dir->isShortcut()) {
             sortNodeAndDirs(dir->mFolderNode);
+        }
     }
 }
 
@@ -316,14 +323,14 @@ void JKRArchive::sortNodesAndDirs() {
 }
 
 bool JKRArchive::validateName(JKRFolderNode*pNode, const std::string &fileName) {
-    for (s32 i = 0; i < mDirectories.size(); i++) {
-        if (!mDirectories[i]->mName.compare(pNode->mName)) {
-            printf("Folder name already exists!\n");
-            return false;
-        }
-    }
+    // for (s32 i = 0; i < mDirectories.size(); i++) {
+    //     if (mDirectories[i]->mName.compare(pNode->mName)) {
+    //         printf("Folder name already exists!\n");
+    //         return false;
+    //     }
+    // }
 
-    return true;
+    // return true;
 }
 
 void JKRArchive::collectStrings(JKRFolderNode*pNode, StringPool*pPool, bool reduceStrings) {

@@ -59,8 +59,10 @@ namespace JKRCompression {
     void encode(const std::string &filePath, JKRCompressionType CompType, bool fast) {
         switch (CompType) {
             case JKRCompressionType_SZS:
-                if (fast)
+                if (fast) {
+                    printf("Using fast compression!\n");
                     fastEncodeSZS(filePath);
+                }
                 else 
                     encodeSZS(filePath);
                     break;
@@ -255,6 +257,11 @@ namespace JKRCompression {
                 validBitCount = 0;
                 dstPos = 0;
             }
+
+            if ((srcPos + 1) * 100 /srcSize != percent) {
+                percent = (srcPos+1) * 100 / srcSize;
+                printf("\rProgress: %u%%", percent);
+            }
         }
         if (validBitCount > 0) {
             writer->write<u8>(currCodeByte);
@@ -265,7 +272,7 @@ namespace JKRCompression {
             validBitCount = 0;
             dstPos = 0;
         }
-
+        printf("\n");
         writer->~BinaryWriter();
     }
 

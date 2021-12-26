@@ -1,4 +1,3 @@
-#include <iostream>
 #include <strings.h>
 #include "JKRCompression.h"
 #include "JKRArchive.h"
@@ -51,7 +50,7 @@ int main(int argc, char*argv[]) {
             std::string filePath = argv[i + 1];
             printf("Packing!\n");
     
-            JKRCompressionType compType;
+            JKRCompressionType compType = JKRCompressionType_NONE;
             bool fast = false;
             bool optimise = false;
             std::string outputPath = filePath + ".arc";
@@ -78,10 +77,13 @@ int main(int argc, char*argv[]) {
 
             JKRArchive* archive = new JKRArchive();
             archive->importFromFolder(filePath);
-            archive->save(outputPath, false);
+            archive->save(outputPath, optimise);
+            delete archive;
 
-            printf("Compressing!\n");
-            //JKRCompression::encode(filePath, compType, fast);
+            if (compType != JKRCompressionType_NONE) {
+                printf("Compressing!\n");
+                JKRCompression::encode(outputPath, compType, fast);
+            }
         }
     }
     printf("Complete!");
