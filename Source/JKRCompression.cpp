@@ -76,10 +76,47 @@ namespace JKRCompression {
         reader.skip(0x4);
 
         u32 decompSize = reader.read<u32>();
+        reader.skip(0x8);
         u8* dst = new u8[decompSize];
-
         u32 dstPos = 0;
-        u32 block;
+
+        u32 validBitCount = 0;
+        u8 block = 0;
+
+        while (dstPos < bufferSize) {
+            if (validBitCount == 0) {
+                block = reader.read<u8>();
+                validBitCount = 8;
+            }
+
+            if ((block & 0x80) != 0) {
+                dst[dstPos] = reader.read<u8>();
+                dstPos++;
+            }
+            else {
+                u8 byte1 = reader.read<u8>();
+                u8 byte2 = reader.read<u8>();
+
+                u32 copySrc = dstPos - ((((byte1 & 0xF) << 8) | byte2) + 1);
+                u32 numBytes = byte1 >> 4;
+
+                if (numBytes == 0) 
+                    numBytes = reader.read<u8>() + 0x12;
+                else 
+                    numBytes += 2;
+
+                for (s32 i = 0; i < numBytes; i++) {
+                    dst[dstPos] = dst[copySrc];
+                    copySrc++;
+                    dstPos++;
+                }
+            }
+
+            block <<= 1;
+            validBitCount--;
+        }
+
+        return dst;
     }
 
     u8* decodeSZP(const u8*pData, u32 bufferSize) {
