@@ -4,21 +4,18 @@
 #include "Util.h"
 
 JKRArchive::JKRArchive(const std::string &filePath) {
-    BinaryReader* reader = new BinaryReader(filePath, EndianSelect::Big);
-    read(*reader);
-    reader->~BinaryReader();
+    BinaryReader reader(filePath, EndianSelect::Big);
+    read(reader);
 }
 
 JKRArchive::JKRArchive(u8*pData, u32 size) {
-    BinaryReader* reader = new BinaryReader(pData, size, EndianSelect::Big);
-    read(*reader);
-    reader->~BinaryReader();
+    BinaryReader reader(pData, size, EndianSelect::Big);
+    read(reader);
 }
 
 void JKRArchive::save(const std::string &filePath, bool reduceStrings) {
-    BinaryWriter* writer = new BinaryWriter(filePath, EndianSelect::Big);
-    write(*writer, reduceStrings);
-    writer->~BinaryWriter();
+    BinaryWriter writer(filePath, EndianSelect::Big);
+    write(writer, reduceStrings);
 }
 
 void JKRArchive::unpack(const std::string &filePath) {
@@ -150,13 +147,7 @@ void JKRArchive::read(BinaryReader &reader) {
             u32 curPos = reader.position();
             reader.seek(mHeader.mFileDataOffset + mHeader.mHeaderSize + dir->mNode.mData, std::ios::beg);
             u8* pData = reader.readBytes(dir->mNode.mDataSize, EndianSelect::Little);
-            reader.seek(curPos, std::ios::beg);
-
-            if (dir->getCompressionType() == JKRCompressionType_SZS)
-                pData = JKRCompression::decodeSZS(pData, dir->mNode.mDataSize);
-            else if (dir->getCompressionType() == JKRCompressionType_SZP)
-                pData = JKRCompression::decodeSZP(pData, dir->mNode.mDataSize);
-                
+            reader.seek(curPos, std::ios::beg);     
             dir->mData = pData;
         }
 
@@ -181,23 +172,21 @@ void JKRArchive::write(BinaryWriter &writer, bool reduceStrings) {
     s32 stringOffs = fileOffs + align32(mDirectories.size() * 0x14);
 
     writer.seek(stringOffs, std::ios::beg);
-    StringPool* pool = new StringPool(StringPoolFormat_NULL_TERMINATED);
-    pool->write(".");
-    pool->write("..");
-    mRoot->mNode.mNameOffs = pool->write(mRoot->mName);
+    StringPool pool(StringPoolFormat_NULL_TERMINATED);
+    pool.write(".");
+    pool.write("..");
+    mRoot->mNode.mNameOffs = pool.write(mRoot->mName);
 
     if (reduceStrings) {
-        collectStrings(mRoot, pool, reduceStrings);
+        collectStrings(mRoot, &pool, reduceStrings);
     }
     else {
-        pool->mLookUp = false;
-        collectStrings(mRoot, pool, reduceStrings);
+        pool.mLookUp = false;
+        collectStrings(mRoot, &pool, reduceStrings);
     }
 
-    writer.writeBytes(pool->mBuffer.data(), pool->mBuffer.size());
-    s32 stringSize = pool->size();
-    while ((stringSize % 32) != 0) stringSize++;
-    free(pool);
+    writer.writeBytes(pool.mBuffer.data(), pool.mBuffer.size());
+    pool.align32();
 
     writer.seek(dirOffs, std::ios::beg);
 
@@ -250,7 +239,7 @@ void JKRArchive::write(BinaryWriter &writer, bool reduceStrings) {
     writer.write<u32>(0x20);
     writer.write<u32>(mDirectories.size());
     writer.write<u32>(fileOffs - 0x20);
-    writer.write<u32>(stringSize);
+    writer.write<u32>(pool.size());
     writer.write<u32>(stringOffs - 0x20);
     writer.write<u16>(mNextFileIdx);
     writer.write<u8>(mSyncFileIds);
@@ -335,25 +324,25 @@ bool JKRArchive::validateName(JKRFolderNode*pNode, const std::string &fileName) 
 
 void JKRArchive::collectStrings(JKRFolderNode*pNode, StringPool*pPool, bool reduceStrings) {
     if (reduceStrings) {
-        for (s32 i = 0; i < pNode->mChildDirs.size(); i++) {
-            pNode->mChildDirs[i]->mNameOffs = pPool->write(pNode->mChildDirs[i]->mName);
+        for (JKRDirectory* dir : pNode->mChildDirs) {
+            dir->mNameOffs = pPool->write(dir->mName);
 
-            if (pNode->mChildDirs[i]->isDirectory() && !pNode->mChildDirs[i]->isShortcut()) { 
-                pNode->mChildDirs[i]->mFolderNode->mNode.mNameOffs = pNode->mChildDirs[i]->mNameOffs;
-                collectStrings(pNode->mChildDirs[i]->mFolderNode, pPool, reduceStrings);  
+            if (dir->isDirectory() && !dir->isShortcut()) { 
+                dir->mFolderNode->mNode.mNameOffs = dir->mNameOffs;
+                collectStrings(dir->mFolderNode, pPool, reduceStrings);  
             }
         }
     }
     else {
-        for (s32 i = 0; i < pNode->mChildDirs.size(); i++) {
-            if (pNode->mChildDirs[i]->isShortcut()) 
-                pNode->mChildDirs[i]->mNameOffs = pPool->find(pNode->mChildDirs[i]->mName);
+        for (JKRDirectory* dir : pNode->mChildDirs) {
+            if (dir->isShortcut()) 
+                dir->mNameOffs = pPool->find(dir->mName);
             else 
-                pNode->mChildDirs[i]->mNameOffs = pPool->write(pNode->mChildDirs[i]->mName);
+                dir->mNameOffs = pPool->write(dir->mName);
 
-            if (pNode->mChildDirs[i]->isDirectory() && !pNode->mChildDirs[i]->isShortcut()) {
-                pNode->mChildDirs[i]->mFolderNode->mNode.mNameOffs = pNode->mChildDirs[i]->mNameOffs;
-                collectStrings(pNode->mChildDirs[i]->mFolderNode, pPool, reduceStrings);  
+            if (dir->isDirectory() && !dir->isShortcut()) {
+                dir->mFolderNode->mNode.mNameOffs = dir->mNameOffs;
+                collectStrings(dir->mFolderNode, pPool, reduceStrings);  
             }
         }
     }

@@ -20,12 +20,13 @@ int main(int argc, char*argv[]) {
         printf("-Os                 # attempts to decrease archive size by removing duplicate strings\n");
         printf("\n<Other>\n");
         printf("-h/--help           # show usage\n");
-        exit(0);
+        return 0;
     }
 
     for (s32 i = 0; i < argc; i++) {
         if (!strcasecmp(argv[i], "-u") || !strcasecmp(argv[i], "--unpack")) {
             std::string filePath = argv[i + 1];
+
             if (!File::FileExists(filePath)) {
                 printf("File isn't exist!\n");
                 return 1;
@@ -45,6 +46,8 @@ int main(int argc, char*argv[]) {
             std::string dir = path.substr(0, lastSlashIdx);
 
             archive->unpack(dir);
+            delete archive;
+            delete pData;
         }
         else if (!strcasecmp(argv[i], "-p") || !strcasecmp(argv[i], "--pack")) {
             std::string filePath = argv[i + 1];

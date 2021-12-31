@@ -3,33 +3,26 @@
 
 namespace JKRCompression {
     JKRCompressionType checkCompression(const std::string &filePath) {
-        BinaryReader* reader = new BinaryReader(filePath, EndianSelect::Big);
-        std::string magic = reader->readString(0x4);
+        BinaryReader reader(filePath, EndianSelect::Big);
+        std::string magic = reader.readString(0x4);
 
         if (magic == "Yaz0") {
             printf("SZS compression found!\n");
-            reader->~BinaryReader();
             return JKRCompressionType_SZS;
         }      
         else if (magic == "Yay0") {
             printf("SZP compression found!\n");
-            reader->~BinaryReader();
             return JKRCompressionType_SZP;
         }         
         else {
-            reader->seek(0, std::ios::beg);
+            reader.seek(0, std::ios::beg);
 
-            if (reader->readString(0x3) == "ASR") {
+            if (reader.readString(0x3) == "ASR") {
                 printf("ASR compression found!\n");
-                reader->~BinaryReader();
                 return JKRCompressionType_ASR;
             }     
         }
         printf("No compression found!\n");
-
-        if (reader)
-            reader->~BinaryReader();
-
         return JKRCompressionType_NONE;
     }
 
@@ -79,55 +72,14 @@ namespace JKRCompression {
     }
     
     u8* decodeSZS(const u8*pData, u32 bufferSize) {
-        BinaryReader* reader = new BinaryReader(pData, bufferSize, EndianSelect::Big);
-        if (reader->readString(0x4) != "Yaz0") {
-            printf("Invalid identifier! Expected Yaz0\n");
-            return nullptr;
-        }
+        BinaryReader reader(pData, bufferSize, EndianSelect::Big);
+        reader.skip(0x4);
 
-        u32 decompSize = reader->read<u32>();
+        u32 decompSize = reader.read<u32>();
         u8* dst = new u8[decompSize];
-        reader->skip(0x8);
+
         u32 dstPos = 0;
-        u32 copySrc;
-        u32 copyLen;
-
-        while (dstPos < decompSize) {
-            u8 block = reader->read<u8>();     
-
-            for (u32 i = 0; i < 8; i++) {
-                if ((block & 0x80) != 0) {     
-                    dst[dstPos] = reader->read<u8>();
-                    dstPos++;
-                }
-                else {
-                    u8 byte1 = reader->read<u8>();
-                    u8 byte2 = reader->read<u8>();
-
-                    copySrc = dstPos - ((byte1 & 0x0F) << 8 | byte2) -1;
-
-                    copyLen = byte1 >> 4;
-                    if (copyLen == 0) 
-                        copyLen = reader->read<u8>() + 0x12;
-                    else 
-                        copyLen += 2;
-
-                    for (u32 y = 0; y < copyLen; y++) {
-                        dst[dstPos] = dst[copySrc];
-                        copySrc++;
-                        dstPos++;
-                    }
-                }
-                block <<= 1;
-
-                if (dstPos >= decompSize || reader->position() >= reader->size()) {
-                    break;
-                }
-            }
-        }     
-        
-        reader->~BinaryReader();
-        return dst;
+        u32 block;
     }
 
     u8* decodeSZP(const u8*pData, u32 bufferSize) {
@@ -153,7 +105,7 @@ namespace JKRCompression {
             }
 
             if (((u32)curMask & (u32)0x80000000) == 0x80000000) {
-                u64 curPos = reader->position();
+                u32 curPos = reader->position();
                 reader->seek(byteChunkAndCountModiferOffset++, std::ios::beg);
                 dst[curOffsInDst++] = reader->read<u8>();
                 reader->seek(curPos, std::ios::beg);
@@ -197,10 +149,10 @@ namespace JKRCompression {
     void encodeSZS(const std::string &filePath) {
         u32 srcSize;
         u8* src = File::readAllBytes(filePath, &srcSize);
-        BinaryWriter* writer = new BinaryWriter(filePath, EndianSelect::Big);
-        writer->writeString("Yaz0");
-        writer->write<u32>(srcSize);
-        writer->writePadding(0x0, 8);
+        BinaryWriter writer(filePath, EndianSelect::Big);
+        writer.writeString("Yaz0");
+        writer.write<u32>(srcSize);
+        writer.writePadding(0x0, 8);
         u8 dst[24];
         s32 srcPos = 0;
         s32 dstPos = 0;
@@ -248,9 +200,9 @@ namespace JKRCompression {
             validBitCount++;
 
             if (validBitCount == 8) {
-                writer->write<u8>(currCodeByte);
+                writer.write<u8>(currCodeByte);
 
-                writer->writeBytes(dst, dstPos);
+                writer.writeBytes(dst, dstPos);
                 dstSize += dstPos + 1;
 
                 currCodeByte = 0;
@@ -264,8 +216,8 @@ namespace JKRCompression {
             }
         }
         if (validBitCount > 0) {
-            writer->write<u8>(currCodeByte);
-            writer->writeBytes(dst, dstPos);
+            writer.write<u8>(currCodeByte);
+            writer.writeBytes(dst, dstPos);
             dstSize += dstPos + 1;
 
             currCodeByte = 0;
@@ -273,7 +225,6 @@ namespace JKRCompression {
             dstPos = 0;
         }
         printf("\n");
-        writer->~BinaryWriter();
     }
 
     // This is faster, but the files it produces are larger

@@ -3,21 +3,19 @@
 
 namespace File {
     void writeAllBytes(const std::string &filePath, const u8 *pBytes, u32 bufferSize) {
-        BinaryWriter* writer = new BinaryWriter(filePath, EndianSelect::Little);
-        writer->writeBytes(pBytes, bufferSize);
-        writer->~BinaryWriter();
+        BinaryWriter writer(filePath, EndianSelect::Little);
+        writer.writeBytes(pBytes, bufferSize);
     }
 
     u8* readAllBytes(const std::string &filePath, u32 *byteCount) {
-        BinaryReader* reader = new BinaryReader(filePath, EndianSelect::Little);
-        u8* ret = reader->readAllBytes();
-        *byteCount = reader->size();
-        reader->~BinaryReader();
+        BinaryReader reader(filePath, EndianSelect::Little);
+        u8* ret = reader.readAllBytes();
+        *byteCount = reader.size();
         return ret;
     }
 
     bool FileExists(const std::string &filePath) {
-        std::ifstream test(filePath.c_str());
+        std::ifstream test(filePath);
         if (!test)
             return false;
         else

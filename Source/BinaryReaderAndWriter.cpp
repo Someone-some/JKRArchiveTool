@@ -206,11 +206,9 @@ u32 StringPool::find(const std::string &string) {
 }
 
 void StringPool::align32() {
-    s32 padLen = mBuffer.size();
+    s32 size = mBuffer.size();
 
-    if (padLen != 0) {
-        for (s32 i = 0; i < padLen; i++) {
-            mBuffer.push_back(padLen);
-        }
+    while ((size % 32) != 0) {
+        mBuffer.push_back(0x0);
     }
 }
