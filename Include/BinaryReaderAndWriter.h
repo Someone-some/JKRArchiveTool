@@ -19,7 +19,7 @@ enum EndianSelect {
 
 class MemoryBuffer : public std::streambuf {
 public:
-    MemoryBuffer(const u8*pBuffer, const u32 size) : std::streambuf() {
+    MemoryBuffer(const u8* pBuffer, const u32 size) : std::streambuf() {
         mBuffer = pBuffer;
         mSize = size;
         setg((char*)pBuffer, (char*)pBuffer, (char*)(pBuffer + size));

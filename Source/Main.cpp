@@ -9,7 +9,7 @@ int main(int argc, char*argv[]) {
 
     if (!strcasecmp(argv[1], "-h") || !strcasecmp(argv[1], "--help") || argc == 1) {
         printf("usage: JKRArchiveTools.exe [-OPTIONS]\n");
-        printf("\n<Required>\n");
+        printf("<Required>\n");
         printf("-u/--unpack [*.arc] # unpacks the given archive\n");
         printf("-p/--pack [*]       # packs the given folder into an archive\n");
         printf("\n<Packing options>\n");
@@ -18,7 +18,11 @@ int main(int argc, char*argv[]) {
         printf("-szp                # compresses the output archive with szp compression\n");
         printf("-f/--fast           # increases compression speed at the expense of file size\n");
         printf("-Os                 # attempts to decrease archive size by removing duplicate strings\n");
-        printf("\n<Other>\n");
+        printf("<File attributes>\n");
+        printf("MRAM                # (default) preload file to main RAM\n");
+        printf("ARAM                # (Gamecube only) preload file to auxiliary RAM\n");
+        printf("DVD                 # load file from DVD\n");
+        printf("<Other>\n");
         printf("-h/--help           # show usage\n");
         return 0;
     }
@@ -54,6 +58,7 @@ int main(int argc, char*argv[]) {
             printf("Packing!\n");
     
             JKRCompressionType compType = JKRCompressionType_NONE;
+            JKRFileAttr attr = JKRFileAttr_FILE;
             bool fast = false;
             bool optimise = false;
             std::string outputPath = filePath + ".arc";
@@ -76,10 +81,29 @@ int main(int argc, char*argv[]) {
                     outputPath.erase(outputPath.begin() + lastSlashIdx + 1, outputPath.end());
                     outputPath.append(argv[i + 1]);
                 }
+
+                if (!strcasecmp(argv[i], "-a") || !strcasecmp(argv[i], "--attr")) {
+                    for (s32 y = i; y < i + 3; y++) {
+                        if (!strcasecmp(argv[y], "mram"))
+                            attr = (JKRFileAttr)(attr | JKRFileAttr_LOAD_TO_MRAM);
+                        else if (!strcasecmp(argv[y], "aram"))
+                            attr = (JKRFileAttr)(attr | JKRFileAttr_LOAD_TO_ARAM);
+                        else if (!strcasecmp(argv[y], "dvd"))
+                            attr = (JKRFileAttr)(attr | JKRFileAttr_LOAD_FROM_DVD);
+
+                        if (!strcasecmp(argv[y], "szs")) {
+                            attr = (JKRFileAttr)(attr | JKRFileAttr_COMPRESSED);
+                            attr = (JKRFileAttr)(attr | JKRFileAttr_USE_SZS);
+                        }
+                    }
+                }
             }
 
+            if (attr = JKRFileAttr_FILE)
+                attr = (JKRFileAttr)(attr | JKRFileAttr_LOAD_TO_MRAM);
+
             JKRArchive* archive = new JKRArchive();
-            archive->importFromFolder(filePath);
+            archive->importFromFolder(filePath, attr);
             archive->save(outputPath, optimise);
             delete archive;
 

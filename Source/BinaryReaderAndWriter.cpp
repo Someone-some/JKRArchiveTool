@@ -117,8 +117,8 @@ BinaryWriter::BinaryWriter(const std::string &rFileName, EndianSelect endian) {
     mEndian = endian;
 }
 
-BinaryWriter::BinaryWriter(const u8* buffer, u32 size, EndianSelect endian) {
-    mBuffer = new MemoryBuffer(buffer, size);
+BinaryWriter::BinaryWriter(const u8*pBuffer, u32 size, EndianSelect endian) {
+    mBuffer = new MemoryBuffer(pBuffer, size);
     mStream = new std::ostream(mBuffer);
     mEndian = endian;
 }

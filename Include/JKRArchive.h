@@ -12,7 +12,7 @@ enum JKRFileAttr {
     JKRFileAttr_LOAD_TO_MRAM = 0x10,
     JKRFileAttr_LOAD_TO_ARAM = 0x20,
     JKRFileAttr_LOAD_FROM_DVD = 0x40,
-    JKRFileAttr_USE_YAZ0 = 0x80,
+    JKRFileAttr_USE_SZS = 0x80,
 
     JKRFileAttr_FILE_AND_COMPRESSION = 0x85,
     JKRFileAttr_FILE_AND_PRELOAD = 0x71,
@@ -108,9 +108,9 @@ public:
 
     void unpack(const std::string &);
     void save(const std::string &, bool);
-    void importFromFolder(const std::string &);
+    void importFromFolder(const std::string &, JKRFileAttr);
     JKRDirectory* createDir(const std::string &, JKRFileAttr, JKRFolderNode*, JKRFolderNode*);
-    JKRDirectory* createFile(const std::string &, JKRFolderNode*);
+    JKRDirectory* createFile(const std::string &, JKRFolderNode*, JKRFileAttr);
     JKRFolderNode* createFolder(const std::string &, JKRFolderNode*);
 
     std::vector<JKRFolderNode*> mFolderNodes;
@@ -134,7 +134,7 @@ private:
 
     u16 nameHash(const std::string &);
 
-    void importNode(const std::string &, JKRFolderNode*);
+    void importNode(const std::string &, JKRFolderNode*, JKRFileAttr);
 
     JKRArchiveHeader mHeader;
     JKRArchiveDataHeader mDataHeader;

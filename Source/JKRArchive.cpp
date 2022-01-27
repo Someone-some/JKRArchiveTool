@@ -25,7 +25,7 @@ void JKRArchive::unpack(const std::string &filePath) {
     mRoot->unpack(fullpath);
 }
 
-void JKRArchive::importFromFolder(const std::string &filePath) {
+void JKRArchive::importFromFolder(const std::string &filePath, JKRFileAttr attr) {
     if (!mRoot) {
         u32 lastSlashIdx = filePath.rfind('\\');
         std::string name = filePath.substr(lastSlashIdx + 1);
@@ -37,10 +37,10 @@ void JKRArchive::importFromFolder(const std::string &filePath) {
         createDir("..", JKRFileAttr_FOLDER, nullptr, mRoot);
     }
 
-    importNode(filePath, mRoot);
+    importNode(filePath, mRoot, attr);
 }
 
-void JKRArchive::importNode(const std::string &filepath, JKRFolderNode*pParentNode) {
+void JKRArchive::importNode(const std::string &filepath, JKRFolderNode*pParentNode, JKRFileAttr attr) {
     DIR* dir = opendir(filepath.c_str());
     dirent* ent;
 
@@ -49,10 +49,10 @@ void JKRArchive::importNode(const std::string &filepath, JKRFolderNode*pParentNo
             continue;        
         if (ent->d_type == DT_DIR) {
             JKRFolderNode* node = createFolder(ent->d_name, pParentNode);
-            importNode(filepath + "\\" + ent->d_name, node);
+            importNode(filepath + "\\" + ent->d_name, node, attr);
         }
         else if (ent->d_type == DT_REG) {       
-            JKRDirectory* file = createFile(ent->d_name, pParentNode);
+            JKRDirectory* file = createFile(ent->d_name, pParentNode, attr);
             file->mData = File::readAllBytes(filepath + "/" + ent->d_name, &file->mNode.mDataSize);
         }
     }
@@ -69,9 +69,9 @@ JKRDirectory* JKRArchive::createDir(const std::string &dirName, JKRFileAttr attr
     return newDir;
 }
 
-JKRDirectory* JKRArchive::createFile(const std::string &fileName, JKRFolderNode*pParentNode) {
+JKRDirectory* JKRArchive::createFile(const std::string &fileName, JKRFolderNode*pParentNode, JKRFileAttr attr) {
     validateName(pParentNode, fileName);
-    JKRDirectory* newFile = createDir(fileName, (JKRFileAttr)(JKRFileAttr_FILE | JKRFileAttr_LOAD_TO_MRAM), nullptr, pParentNode);
+    JKRDirectory* newFile = createDir(fileName, attr, nullptr, pParentNode);
     
     if (!mSyncFileIds) {
         newFile->mNode.mNodeIdx = mNextFileIdx;
@@ -249,6 +249,9 @@ void JKRArchive::writeFileData(BinaryWriter &writer, std::vector<JKRDirectory*> 
     u32 startPos = writer.size();
 
     for (JKRDirectory* dir : files) {
+        if (dir->mAttr & JKRFileAttr_USE_SZS) {
+            dir->mData = (u8*)JKRCompression::encodeSZSFast(dir->mData, dir->mNode.mDataSize, &dir->mNode.mDataSize);
+        }
         writer.writeBytes(dir->mData, dir->mNode.mDataSize);
         writer.align32();
     }
@@ -405,7 +408,7 @@ JKRDirectory::JKRDirectory() {
 
 JKRCompressionType JKRDirectory::getCompressionType() {
     if (mAttr & JKRFileAttr_FILE && mAttr & JKRFileAttr_COMPRESSED) {
-        if (mAttr & JKRFileAttr_USE_YAZ0) 
+        if (mAttr & JKRFileAttr_USE_SZS) 
             return JKRCompressionType_SZS;
         else 
             return JKRCompressionType_SZP;

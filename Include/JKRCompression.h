@@ -19,7 +19,7 @@ namespace JKRCompression {
     u8* decodeSZP(const u8*, u32);
     u32 encodeSimpleSZS(u8 *, s32, s32, u32 *);
     u32 encodeAdvancedSZS(u8 *, s32, s32, u32 *);
-    void encodeSZS(const std::string &);
-    void fastEncodeSZS(const std::string &);
+    const u8* encodeSZS(u8*, u32, u32 *);
+    const u8* encodeSZSFast(u8*, u32, u32 *);
     void encodeSZP(const std::string &);
 };
