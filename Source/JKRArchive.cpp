@@ -2,6 +2,7 @@
 #include <direct.h>
 #include <dirent.h>
 #include "Util.h"
+#include "filesystem.hpp"
 
 JKRArchive::JKRArchive(const std::string &filePath) {
     BinaryReader reader(filePath, EndianSelect::Big);
@@ -21,7 +22,7 @@ void JKRArchive::save(const std::string &filePath, bool reduceStrings) {
 void JKRArchive::unpack(const std::string &filePath) {
     std::string fullpath;
     fullpath = filePath + "/" + mRoot->mName;
-    mkdir(fullpath.c_str());
+    ghc::filesystem::create_directories(fullpath.c_str());
     mRoot->unpack(fullpath);
 }
 
@@ -361,7 +362,7 @@ void JKRFolderNode::unpack(const std::string &filePath) {
         fullpath = filePath + "/" + mChildDirs[i]->mName;
 
         if (mChildDirs[i]->isDirectory()) {      
-            mkdir(fullpath.c_str());
+            ghc::filesystem::create_directories(fullpath.c_str());
             mChildDirs[i]->mFolderNode->unpack(fullpath);
         }
         else if (mChildDirs[i]->isFile()) {

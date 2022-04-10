@@ -203,6 +203,7 @@ u32 StringPool::find(const std::string &string) {
     if (mOffsets.find(packString(string)) != mOffsets.end()) {
         return mOffsets[packString(string)];
     }
+    return -1;
 }
 
 void StringPool::align32() {

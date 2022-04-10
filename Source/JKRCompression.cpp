@@ -187,86 +187,86 @@ namespace JKRCompression {
     }
 
     const u8* encodeSZS(u8* src, u32 srcSize, u32 *outSize) {
-        // BinaryWriter writer(src, srcSize, EndianSelect::Little);
-        // writer.writeString("Yaz0");
-        // return writer.getBuffer();
-        // writer.write<u32>(srcSize);
-        // writer.writePadding(0x0, 8);
-        // u8 dst[24];
-        // s32 srcPos = 0;
-        // s32 dstPos = 0;
-        // s32 dstSize = 0;
-        // s32 percent = 0;
+        BinaryWriter writer(src, srcSize, EndianSelect::Little);
+        writer.writeString("Yaz0");
+        return writer.getBuffer();
+        writer.write<u32>(srcSize);
+        writer.writePadding(0x0, 8);
+        u8 dst[24];
+        s32 srcPos = 0;
+        s32 dstPos = 0;
+        s32 dstSize = 0;
+        s32 percent = 0;
 
-        // u32 validBitCount = 0;
-        // u8 currCodeByte = 0;
-        // while(srcPos < srcSize) {
-        //     u32 numBytes;
-        //     u32 matchPos;
-        //     u32 srcPosBak;
+        u32 validBitCount = 0;
+        u8 currCodeByte = 0;
+        while(srcPos < srcSize) {
+            u32 numBytes;
+            u32 matchPos;
+            u32 srcPosBak;
 
-        //     numBytes = encodeAdvancedSZS(src, srcSize, srcPos, &matchPos);
-        //     if (numBytes < 3) {
-        //         dst[dstPos] = src[srcPos];
-        //         dstPos++;
-        //         srcPos++;
-        //         currCodeByte |= (0x80 >> validBitCount);
-        //     }
-        //     else {
-        //         u32 dist = srcPos - matchPos - 1; 
-        //         u8 byte1, byte2, byte3;
+            numBytes = encodeAdvancedSZS(src, srcSize, srcPos, &matchPos);
+            if (numBytes < 3) {
+                dst[dstPos] = src[srcPos];
+                dstPos++;
+                srcPos++;
+                currCodeByte |= (0x80 >> validBitCount);
+            }
+            else {
+                u32 dist = srcPos - matchPos - 1; 
+                u8 byte1, byte2, byte3;
 
-        //         if (numBytes >= 0x12) {
-        //             byte1 = 0 | (dist >> 8);
-        //             byte2 = dist & 0xff;
-        //             dst[dstPos++] = byte1;
-        //             dst[dstPos++] = byte2;
+                if (numBytes >= 0x12) {
+                    byte1 = 0 | (dist >> 8);
+                    byte2 = dist & 0xff;
+                    dst[dstPos++] = byte1;
+                    dst[dstPos++] = byte2;
 
-        //             if (numBytes > 0xff + 0x12)
-        //                 numBytes = 0xff + 0x12;
+                    if (numBytes > 0xff + 0x12)
+                        numBytes = 0xff + 0x12;
                         
-        //             byte3 = numBytes - 0x12;
-        //             dst[dstPos++] = byte3;
-        //         } 
-        //         else {
-        //             byte1 = ((numBytes - 2) << 4) | (dist >> 8);
-        //             byte2 = dist & 0xff;
-        //             dst[dstPos++] = byte1;
-        //             dst[dstPos++] = byte2; 
-        //         }
-        //         srcPos += numBytes;
-        //     }
-        //     validBitCount++;
+                    byte3 = numBytes - 0x12;
+                    dst[dstPos++] = byte3;
+                } 
+                else {
+                    byte1 = ((numBytes - 2) << 4) | (dist >> 8);
+                    byte2 = dist & 0xff;
+                    dst[dstPos++] = byte1;
+                    dst[dstPos++] = byte2; 
+                }
+                srcPos += numBytes;
+            }
+            validBitCount++;
 
-        //     if (validBitCount == 8) {
-        //         writer.write<u8>(currCodeByte);
+            if (validBitCount == 8) {
+                writer.write<u8>(currCodeByte);
 
-        //         writer.writeBytes(dst, dstPos);
-        //         dstSize += dstPos + 1;
+                writer.writeBytes(dst, dstPos);
+                dstSize += dstPos + 1;
 
-        //         currCodeByte = 0;
-        //         validBitCount = 0;
-        //         dstPos = 0;
-        //     }
+                currCodeByte = 0;
+                validBitCount = 0;
+                dstPos = 0;
+            }
 
-        //     if ((srcPos + 1) * 100 / srcSize != percent) {
-        //         percent = (srcPos + 1) * 100 / srcSize;
-        //         printf("\rProgress: %u%%", percent);
-        //     }
-        // }
-        // if (validBitCount > 0) {
-        //     writer.write<u8>(currCodeByte);
-        //     writer.writeBytes(dst, dstPos);
-        //     dstSize += dstPos + 1;
+            if ((srcPos + 1) * 100 / srcSize != percent) {
+                percent = (srcPos + 1) * 100 / srcSize;
+                printf("\rProgress: %u%%", percent);
+            }
+        }
+        if (validBitCount > 0) {
+            writer.write<u8>(currCodeByte);
+            writer.writeBytes(dst, dstPos);
+            dstSize += dstPos + 1;
 
-        //     currCodeByte = 0;
-        //     validBitCount = 0;
-        //     dstPos = 0;
-        // }
-        // printf("\n");
-        // *outSize = dstSize;
-        // std::cout << src[0] << '\n';
-        // return writer.getBuffer();
+            currCodeByte = 0;
+            validBitCount = 0;
+            dstPos = 0;
+        }
+        printf("\n");
+        *outSize = dstSize;
+        std::cout << src[0] << '\n';
+        return writer.getBuffer();
     }
 
     // This is faster, but the files it produces are larger
@@ -303,9 +303,9 @@ namespace JKRCompression {
 
                     s32 maxback = 0x400;
                     if (offs < maxback) maxback = offs;
-                    maxback = (s32)src - maxback;
+                    maxback = *(s32*)src - maxback;
                     s32 tmpnr;
-                    while (maxback <= (s32)ptr) {
+                    while (maxback <= *(s32*)ptr) {
                         if (*(u16*)ptr == *(u16*)src && ptr[2] == src[2]) {
                             tmpnr = 3;
                             while (tmpnr < maxnum && ptr[tmpnr] == src[tmpnr]) tmpnr++;
