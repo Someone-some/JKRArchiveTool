@@ -48,7 +48,7 @@ int main(int argc, char*argv[]) {
             std::string path = filePath;
             u32 lastSlashIdx = path.rfind('\\');
             std::string dir = path.substr(0, lastSlashIdx);
-
+            dir = dir.substr(0, dir.rfind("."));
             archive->unpack(dir);
             delete archive;
             delete pData;
